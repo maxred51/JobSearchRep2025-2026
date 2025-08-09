@@ -1,0 +1,72 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/db');
+
+// CREATE - Dodanie nowego powiązania oferta-wymiar
+router.post('/', async (req, res) => {
+  const { Ofertaid, Wymiarid } = req.body;
+  if (!Ofertaid || !Wymiarid) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO oferta_wymiar (Ofertaid, Wymiarid) VALUES (?, ?)',
+      [Ofertaid, Wymiarid]
+    );
+    res.status(201).json({ Ofertaid, Wymiarid });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Powiązanie już istnieje' });
+    }
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(400).json({ error: 'Podana oferta lub wymiar etatu nie istnieje' });
+    }
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// READ - Pobieranie wszystkich powiązań oferta-wymiar
+router.get('/', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM oferta_wymiar');
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// READ - Pobieranie powiązania oferta-wymiar po Ofertaid i Wymiarid
+router.get('/:Ofertaid/:Wymiarid', async (req, res) => {
+  const { Ofertaid, Wymiarid } = req.params;
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM oferta_wymiar WHERE Ofertaid = ? AND Wymiarid = ?',
+      [Ofertaid, Wymiarid]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Powiązanie nie znalezione' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// DELETE - Usunięcie powiązania oferta-wymiar
+router.delete('/:Ofertaid/:Wymiarid', async (req, res) => {
+  const { Ofertaid, Wymiarid } = req.params;
+  try {
+    const [result] = await pool.query(
+      'DELETE FROM oferta_wymiar WHERE Ofertaid = ? AND Wymiarid = ?',
+      [Ofertaid, Wymiarid]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Powiązanie nie znalezione' });
+    }
+    res.json({ message: 'Powiązanie usunięte' });
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+module.exports = router;
