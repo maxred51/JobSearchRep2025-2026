@@ -1,23 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const config = require('../config/jwt');
+const authMiddleware = require('../middlewares/auth');
 
-// CREATE - Dodanie nowego pracownika HR
+// CREATE - Rejestracja nowego pracownika HR
 router.post('/', async (req, res) => {
-  const { imie, nazwisko, telefon, email, plec, Firmaid } = req.body;
-  if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec) || !Firmaid) {
+  const { imie, nazwisko, telefon, email, haslo, plec, Firmaid } = req.body;
+  if (!imie || !nazwisko || !telefon || !email || !haslo || !plec || !['M', 'K'].includes(plec) || !Firmaid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
+    const [existing] = await pool.query('SELECT * FROM pracownikHR WHERE email = ? OR telefon = ?', [email, telefon]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Email lub telefon już istnieje' });
+    }
+    const hashedPassword = await bcrypt.hash(haslo, 10);
     const [result] = await pool.query(
-      'INSERT INTO pracownikHR (imie, nazwisko, telefon, email, plec, Firmaid) VALUES (?, ?, ?, ?, ?, ?)',
-      [imie, nazwisko, telefon, email, plec, Firmaid]
+      'INSERT INTO pracownikHR (imie, nazwisko, telefon, email, haslo, plec, Firmaid) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [imie, nazwisko, telefon, email, hashedPassword, plec, Firmaid]
     );
     res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec, Firmaid });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ error: 'Telefon lub email już istnieje' });
-    }
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana firma nie istnieje' });
     }
@@ -25,21 +31,44 @@ router.post('/', async (req, res) => {
   }
 });
 
-// READ - Pobieranie wszystkich pracowników HR
-router.get('/', async (req, res) => {
+// LOGIN - Logowanie pracownika HR
+router.post('/login', async (req, res) => {
+  const { email, haslo } = req.body;
+  if (!email || !haslo) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
   try {
-    const [rows] = await pool.query('SELECT * FROM pracownikHR');
+    const [rows] = await pool.query('SELECT * FROM pracownikHR WHERE email = ?', [email]);
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Nieprawidłowy email lub hasło' });
+    }
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(haslo, user.haslo);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Nieprawidłowy email lub hasło' });
+    }
+    const token = jwt.sign({ id: user.id, role: 'pracownikHR' }, config.secret, { expiresIn: config.expiresIn });
+    res.json({ token, user: { id: user.id, imie: user.imie, nazwisko: user.nazwisko, email: user.email } });
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// READ - Pobieranie wszystkich pracowników HR (zabezpieczone)
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid FROM pracownikHR');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
 
-// READ - Pobieranie pracownika HR po ID
-router.get('/:id', async (req, res) => {
+// READ - Pobieranie pracownika HR po ID (zabezpieczone)
+router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query('SELECT * FROM pracownikHR WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid FROM pracownikHR WHERE id = ?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Pracownik HR nie znaleziony' });
     }
@@ -49,26 +78,33 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// UPDATE - Aktualizacja pracownika HR
-router.put('/:id', async (req, res) => {
+// UPDATE - Aktualizacja pracownika HR (zabezpieczone)
+router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { imie, nazwisko, telefon, email, plec, Firmaid } = req.body;
+  const { imie, nazwisko, telefon, email, haslo, plec, Firmaid } = req.body;
   if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec) || !Firmaid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
-    const [result] = await pool.query(
-      'UPDATE pracownikHR SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?, Firmaid = ? WHERE id = ?',
-      [imie, nazwisko, telefon, email, plec, Firmaid, id]
-    );
+    const [existing] = await pool.query('SELECT * FROM pracownikHR WHERE (email = ? OR telefon = ?) AND id != ?', [email, telefon, id]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Email lub telefon już istnieje' });
+    }
+    let query = 'UPDATE pracownikHR SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?, Firmaid = ?';
+    const params = [imie, nazwisko, telefon, email, plec, Firmaid];
+    if (haslo) {
+      const hashedPassword = await bcrypt.hash(haslo, 10);
+      query += ', haslo = ?';
+      params.push(hashedPassword);
+    }
+    query += ' WHERE id = ?';
+    params.push(id);
+    const [result] = await pool.query(query, params);
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Pracownik HR nie znaleziony' });
     }
     res.json({ id, imie, nazwisko, telefon, email, plec, Firmaid });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ error: 'Telefon lub email już istnieje' });
-    }
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana firma nie istnieje' });
     }
@@ -76,8 +112,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE - Usunięcie pracownika HR
-router.delete('/:id', async (req, res) => {
+// DELETE - Usunięcie pracownika HR (zabezpieczone)
+router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     const [result] = await pool.query('DELETE FROM pracownikHR WHERE id = ?', [id]);
