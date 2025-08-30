@@ -82,6 +82,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { imie, nazwisko, telefon, email, haslo, plec, Firmaid } = req.body;
+  if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(id)) {
+    return res.status(403).json({ error: 'Brak uprawnień do edycji tego konta' });
+  }
   if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec) || !Firmaid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
@@ -115,6 +118,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // DELETE - Usunięcie pracownika HR (zabezpieczone)
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(id)) {
+    return res.status(403).json({ error: 'Brak uprawnień do usunięcia tego konta' });
+  }
   try {
     const [result] = await pool.query('DELETE FROM pracownikHR WHERE id = ?', [id]);
     if (result.affectedRows === 0) {
