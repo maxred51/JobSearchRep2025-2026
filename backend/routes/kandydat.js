@@ -8,8 +8,8 @@ const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Rejestracja nowego kandydata
 router.post('/', async (req, res) => {
-  const { imie, nazwisko, telefon, email, haslo, plec, Kategoriaid } = req.body;
-  if (!imie || !nazwisko || !telefon || !email || !haslo || !plec || !['M', 'K'].includes(plec) || !Kategoriaid) {
+  const { imie, nazwisko, telefon, email, haslo, plec } = req.body;
+  if (!imie || !nazwisko || !telefon || !email || !haslo || !plec || !['M', 'K'].includes(plec)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
@@ -19,14 +19,11 @@ router.post('/', async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(haslo, 10);
     const [result] = await pool.query(
-      'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec, Kategoriaid) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [imie, nazwisko, telefon, email, hashedPassword, plec, Kategoriaid]
+      'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec) VALUES (?, ?, ?, ?, ?, ?)',
+      [imie, nazwisko, telefon, email, hashedPassword, plec]
     );
-    res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec, Kategoriaid });
+    res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec });
   } catch (error) {
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      return res.status(400).json({ error: 'Podana kategoria nie istnieje' });
-    }
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
@@ -57,7 +54,7 @@ router.post('/login', async (req, res) => {
 // READ - Pobieranie wszystkich kandydatów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Kategoriaid FROM kandydat');
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec FROM kandydat');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -68,7 +65,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Kategoriaid FROM kandydat WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec FROM kandydat WHERE id = ?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Kandydat nie znaleziony' });
     }
@@ -81,8 +78,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // UPDATE - Aktualizacja kandydata (zabezpieczone)
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { imie, nazwisko, telefon, email, haslo, plec, Kategoriaid } = req.body;
-  if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec) || !Kategoriaid) {
+  const { imie, nazwisko, telefon, email, haslo, plec } = req.body;
+  if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
@@ -90,8 +87,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Email lub telefon już istnieje' });
     }
-    let query = 'UPDATE kandydat SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?, Kategoriaid = ?';
-    const params = [imie, nazwisko, telefon, email, plec, Kategoriaid];
+    let query = 'UPDATE kandydat SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?';
+    const params = [imie, nazwisko, telefon, email, plec];
     if (haslo) {
       const hashedPassword = await bcrypt.hash(haslo, 10);
       query += ', haslo = ?';
@@ -103,11 +100,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Kandydat nie znaleziony' });
     }
-    res.json({ id, imie, nazwisko, telefon, email, plec, Kategoriaid });
+    res.json({ id, imie, nazwisko, telefon, email, plec });
   } catch (error) {
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      return res.status(400).json({ error: 'Podana kategoria nie istnieje' });
-    }
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });

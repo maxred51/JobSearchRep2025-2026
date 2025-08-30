@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-
 const administratorRouter = require('./routes/administrator');
 const kategoriakandydataRouter = require('./routes/kategoriakandydata');
 const kandydatRouter = require('./routes/kandydat');
@@ -17,6 +16,7 @@ const umowaRouter = require('./routes/umowa');
 const ofertaUmowaRouter = require('./routes/oferta_umowa');
 const wymiarRouter = require('./routes/wymiar');
 const ofertaWymiarRouter = require('./routes/oferta_wymiar');
+const kandydatKategoriaKandydataRouter = require('./routes/kandydat_kategoriakandydata');
 
 const app = express();
 
@@ -39,6 +39,7 @@ app.use('/api/umowa', umowaRouter);
 app.use('/api/oferta_umowa', ofertaUmowaRouter);
 app.use('/api/wymiar', wymiarRouter);
 app.use('/api/oferta_wymiar', ofertaWymiarRouter);
+app.use('/api/kandydat_kategoriakandydata', kandydatKategoriaKandydataRouter);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
