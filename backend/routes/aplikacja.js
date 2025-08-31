@@ -22,10 +22,10 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Brak uprawnień do tej oferty' });
     }
     const [result] = await pool.query(
-      'INSERT INTO aplikacja (Kandydatid, Ofertaid) VALUES (?, ?)',
+      'INSERT INTO aplikacja (Kandydatid, Ofertaid, status) VALUES (?, ?, "rozpatrywana")',
       [Kandydatid, Ofertaid]
     );
-    res.status(201).json({ Kandydatid, Ofertaid });
+    res.status(201).json({ Kandydatid, Ofertaid, status: "rozpatrywana" });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Aplikacja już istnieje' });
@@ -81,6 +81,7 @@ router.get('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
 // READ - Pobieranie listy kandydatów, którzy aplikowali na oferty pracownika HR (zabezpieczone)
 router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
   const { PracownikHRid } = req.params;
+  const { sortBy, sortOrder, status } = req.query;
   try {
     // Sprawdzenie, czy użytkownik ma uprawnienia
     if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid)) {
@@ -91,16 +92,56 @@ router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
     if (pracownikHR.length === 0) {
       return res.status(400).json({ error: 'Podany pracownik HR nie istnieje' });
     }
-    // Pobranie listy kandydatów
-    const [rows] = await pool.query(
-      'SELECT DISTINCT k.id, k.imie, k.nazwisko, k.email, k.telefon, k.plec, a.Ofertaid ' +
-      'FROM kandydat k ' +
-      'JOIN aplikacja a ON k.id = a.Kandydatid ' +
-      'JOIN oferta o ON a.Ofertaid = o.id ' +
-      'WHERE o.PracownikHRid = ?',
-      [PracownikHRid]
-    );
+    // Budowanie zapytania SQL
+    let query = `
+      SELECT DISTINCT k.id, k.imie, k.nazwisko, k.email, k.telefon, k.plec, k.cv_path, a.Ofertaid, a.status
+      FROM kandydat k
+      JOIN aplikacja a ON k.id = a.Kandydatid
+      JOIN oferta o ON a.Ofertaid = o.id
+      WHERE o.PracownikHRid = ?
+    `;
+    const queryParams = [PracownikHRid];
+    // Filtrowanie po statusie
+    if (status && ['rozpatrywana', 'zaakceptowana', 'odrzucona'].includes(status)) {
+      query += ' AND a.status = ?';
+      queryParams.push(status);
+    }
+    // Sortowanie
+    if (sortBy && ['imie', 'nazwisko'].includes(sortBy)) {
+      const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+      query += ` ORDER BY k.${sortBy} ${order}`;
+    }
+    const [rows] = await pool.query(query, queryParams);
     res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// UPDATE - Zmiana statusu aplikacji
+router.put('/:Kandydatid/:Ofertaid/status', authMiddleware, async (req, res) => {
+  const { Kandydatid, Ofertaid } = req.params;
+  const { status } = req.body;
+  if (!status || !['rozpatrywana', 'zaakceptowana', 'odrzucona'].includes(status)) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  try {
+    // Weryfikacja uprawnień
+    const [oferta] = await pool.query('SELECT PracownikHRid FROM oferta WHERE id = ?', [Ofertaid]);
+    if (oferta.length === 0) {
+      return res.status(404).json({ error: 'Oferta nie znaleziona' });
+    }
+    if (req.user.role === 'pracownikHR' && oferta[0].PracownikHRid !== req.user.id) {
+      return res.status(403).json({ error: 'Brak uprawnień do zmiany statusu tej aplikacji' });
+    }
+    const [result] = await pool.query(
+      'UPDATE aplikacja SET status = ? WHERE Kandydatid = ? AND Ofertaid = ?',
+      [status, Kandydatid, Ofertaid]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Aplikacja nie znaleziona' });
+    }
+    res.json({ Kandydatid, Ofertaid, status });
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
   }

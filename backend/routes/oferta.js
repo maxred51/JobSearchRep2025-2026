@@ -50,6 +50,21 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// READ - Pobieranie ofert pracownika HR (zabezpieczone)
+router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
+  const { PracownikHRid } = req.params;
+  try {
+    // Sprawdzenie uprawnień
+    if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid)) {
+      return res.status(403).json({ error: 'Brak uprawnień do wyświetlania ofert' });
+    }
+    const [rows] = await pool.query('SELECT * FROM oferta WHERE PracownikHRid = ?', [PracownikHRid]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 // UPDATE - Aktualizacja oferty
 router.put('/:id', authMiddleware, async (req, res) => {
   if (req.user.role !== 'pracownikHR') {

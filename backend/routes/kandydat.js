@@ -8,7 +8,7 @@ const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Rejestracja nowego kandydata
 router.post('/', async (req, res) => {
-  const { imie, nazwisko, telefon, email, haslo, plec } = req.body;
+  const { imie, nazwisko, telefon, email, haslo, plec, cv_path } = req.body;
   if (!imie || !nazwisko || !telefon || !email || !haslo || !plec || !['M', 'K'].includes(plec)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
@@ -19,10 +19,10 @@ router.post('/', async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(haslo, 10);
     const [result] = await pool.query(
-      'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec) VALUES (?, ?, ?, ?, ?, ?)',
-      [imie, nazwisko, telefon, email, hashedPassword, plec]
+      'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec, cv_path) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [imie, nazwisko, telefon, email, hashedPassword, plec, cv_path || null]
     );
-    res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec });
+    res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec, cv_path });
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
   }
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
 // READ - Pobieranie wszystkich kandydatów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec FROM kandydat');
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path FROM kandydat');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -65,7 +65,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec FROM kandydat WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path FROM kandydat WHERE id = ?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Kandydat nie znaleziony' });
     }
@@ -75,10 +75,40 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// READ - Pobieranie CV kandydata (zabezpieczone)
+router.get('/:id/cv', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Pobierz kandydata
+    const [kandydat] = await pool.query('SELECT cv_path FROM kandydat WHERE id = ?', [id]);
+    if (kandydat.length === 0) {
+      return res.status(404).json({ error: 'Kandydat nie znaleziony' });
+    }
+    if (!kandydat[0].cv_path) {
+      return res.status(404).json({ error: 'CV nie istnieje dla tego kandydata' });
+    }
+    // Weryfikacja uprawnień dla pracownika HR
+    if (req.user.role === 'pracownikHR') {
+      const [aplikacje] = await pool.query(
+        'SELECT a.Kandydatid FROM aplikacja a ' +
+        'JOIN oferta o ON a.Ofertaid = o.id ' +
+        'WHERE a.Kandydatid = ? AND o.PracownikHRid = ?',
+        [id, req.user.id]
+      );
+      if (aplikacje.length === 0) {
+        return res.status(403).json({ error: 'Brak uprawnień do wyświetlenia CV tego kandydata' });
+      }
+    }
+    res.json({ cv_path: kandydat[0].cv_path });
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 // UPDATE - Aktualizacja kandydata (zabezpieczone)
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { imie, nazwisko, telefon, email, haslo, plec } = req.body;
+  const { imie, nazwisko, telefon, email, haslo, plec, cv_path } = req.body;
   if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
@@ -87,8 +117,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Email lub telefon już istnieje' });
     }
-    let query = 'UPDATE kandydat SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?';
-    const params = [imie, nazwisko, telefon, email, plec];
+    let query = 'UPDATE kandydat SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?, cv_path = ?';
+    const params = [imie, nazwisko, telefon, email, plec, cv_path || null];
     if (haslo) {
       const hashedPassword = await bcrypt.hash(haslo, 10);
       query += ', haslo = ?';
@@ -100,7 +130,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Kandydat nie znaleziony' });
     }
-    res.json({ id, imie, nazwisko, telefon, email, plec });
+    res.json({ id, imie, nazwisko, telefon, email, plec, cv_path });
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
   }
