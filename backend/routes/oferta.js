@@ -8,16 +8,16 @@ router.post('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'pracownikHR') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
-  const { tytuł, opis, wynagrodzenie, lokalizacja, czas, KategoriaPracyid } = req.body;
+  const { tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid } = req.body;
   if (!tytuł || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
     const [result] = await pool.query(
-      'INSERT INTO oferta (tytuł, opis, wynagrodzenie, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna) VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)',
-      [tytuł, opis, wynagrodzenie, lokalizacja, czas, req.user.id, KategoriaPracyid]
+      'INSERT INTO oferta (tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)',
+      [tytuł, opis, wymagania || null, wynagrodzenie, lokalizacja, czas, req.user.id, KategoriaPracyid]
     );
-    res.status(201).json({ id: result.insertId, tytuł, opis, wynagrodzenie, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna: true });
+    res.status(201).json({ id: result.insertId, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna: true });
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana kategoria pracy nie istnieje' });
@@ -58,7 +58,11 @@ router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
     if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid)) {
       return res.status(403).json({ error: 'Brak uprawnień do wyświetlania ofert' });
     }
-    const [rows] = await pool.query('SELECT * FROM oferta WHERE PracownikHRid = ?', [PracownikHRid]);
+    const [rows] = await pool.query(
+      'SELECT o.*, (SELECT COUNT(*) FROM aplikacja a WHERE a.Ofertaid = o.id) AS liczba_aplikacji ' +
+      'FROM oferta o WHERE o.PracownikHRid = ?',
+      [PracownikHRid]
+    );
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -71,30 +75,27 @@ router.put('/:id', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   const { id } = req.params;
-  const { tytuł, opis, wynagrodzenie, lokalizacja, czas, KategoriaPracyid, aktywna } = req.body;
+  const { tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid, aktywna } = req.body;
   if (!tytuł || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid || aktywna === undefined) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
-    // Weryfikacja, czy oferta należy do pracownika HR i jest aktywna
-    const [oferta] = await pool.query('SELECT PracownikHRid, aktywna FROM oferta WHERE id = ?', [id]);
+    // Weryfikacja, czy oferta należy do pracownika HR
+    const [oferta] = await pool.query('SELECT PracownikHRid FROM oferta WHERE id = ?', [id]);
     if (oferta.length === 0) {
       return res.status(404).json({ error: 'Oferta nie znaleziona' });
     }
     if (oferta[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do edycji tej oferty' });
     }
-    if (!oferta[0].aktywna && aktywna) {
-      return res.status(400).json({ error: 'Nie można aktywować nieaktywnej oferty' });
-    }
     const [result] = await pool.query(
-      'UPDATE oferta SET tytuł = ?, opis = ?, wynagrodzenie = ?, lokalizacja = ?, czas = ?, KategoriaPracyid = ?, aktywna = ? WHERE id = ?',
-      [tytuł, opis, wynagrodzenie, lokalizacja, czas, KategoriaPracyid, aktywna, id]
+      'UPDATE oferta SET tytuł = ?, opis = ?, wynagrodzenie = ?, wymagania = ?, lokalizacja = ?, czas = ?, KategoriaPracyid = ?, aktywna = ? WHERE id = ?',
+      [tytuł, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, KategoriaPracyid, aktywna, id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Oferta nie znaleziona' });
     }
-    res.json({ id, tytuł, opis, wynagrodzenie, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna });
+    res.json({ id, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna });
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana kategoria pracy nie istnieje' });

@@ -22,10 +22,10 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Brak uprawnień do tej oferty' });
     }
     const [result] = await pool.query(
-      'INSERT INTO aplikacja (Kandydatid, Ofertaid, status) VALUES (?, ?, "rozpatrywana")',
+      'INSERT INTO aplikacja (Kandydatid, Ofertaid, status) VALUES (?, ?, "oczekujaca")',
       [Kandydatid, Ofertaid]
     );
-    res.status(201).json({ Kandydatid, Ofertaid, status: "rozpatrywana" });
+    res.status(201).json({ Kandydatid, Ofertaid, status: "oczekujaca" });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Aplikacja już istnieje' });
@@ -36,17 +36,41 @@ router.post('/', authMiddleware, async (req, res) => {
 
 // READ - Pobieranie wszystkich aplikacji (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
+  const { sortBy, sortOrder, status } = req.query;
   try {
     if (req.user.role === 'pracownikHR') {
-      const [rows] = await pool.query(
-        'SELECT a.* FROM aplikacja a ' +
-        'JOIN oferta o ON a.Ofertaid = o.id ' +
-        'WHERE o.PracownikHRid = ?',
-        [req.user.id]
-      );
+      let query = `
+        SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, 
+               o.tytuł AS stanowisko, k.imie, k.nazwisko
+        FROM aplikacja a
+        JOIN oferta o ON a.Ofertaid = o.id
+        JOIN kandydat k ON a.Kandydatid = k.id
+        WHERE o.PracownikHRid = ?
+      `;
+      const queryParams = [req.user.id];
+
+      // Filtrowanie po statusie
+      if (status && ['oczekujaca', 'odrzucona', 'zakceptowana'].includes(status)) {
+        query += ' AND a.status = ?';
+        queryParams.push(status);
+      }
+
+      // Sortowanie
+      if (sortBy === 'stanowisko') {
+        const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+        query += ` ORDER BY o.tytuł ${order}`;
+      }
+
+      const [rows] = await pool.query(query, queryParams);
       res.json(rows);
     } else if (req.user.role === 'administrator') {
-      const [rows] = await pool.query('SELECT * FROM aplikacja');
+      const [rows] = await pool.query(`
+        SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, 
+               o.tytuł AS stanowisko, k.imie, k.nazwisko
+        FROM aplikacja a
+        JOIN oferta o ON a.Ofertaid = o.id
+        JOIN kandydat k ON a.Kandydatid = k.id
+      `);
       res.json(rows);
     } else {
       return res.status(403).json({ error: 'Brak uprawnień' });
@@ -61,8 +85,10 @@ router.get('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
   const { Kandydatid, Ofertaid } = req.params;
   try {
     const [rows] = await pool.query(
-      'SELECT a.* FROM aplikacja a ' +
+      'SELECT a.*, o.tytuł AS stanowisko, k.imie, k.nazwisko ' +
+      'FROM aplikacja a ' +
       'JOIN oferta o ON a.Ofertaid = o.id ' +
+      'JOIN kandydat k ON a.Kandydatid = k.id ' +
       'WHERE a.Kandydatid = ? AND a.Ofertaid = ?',
       [Kandydatid, Ofertaid]
     );
@@ -81,7 +107,7 @@ router.get('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
 // READ - Pobieranie listy kandydatów, którzy aplikowali na oferty pracownika HR (zabezpieczone)
 router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
   const { PracownikHRid } = req.params;
-  const { sortBy, sortOrder, status } = req.query;
+  const { sortBy, sortOrder, status, kategoria } = req.query;
   try {
     // Sprawdzenie, czy użytkownik ma uprawnienia
     if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid)) {
@@ -94,17 +120,25 @@ router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
     }
     // Budowanie zapytania SQL
     let query = `
-      SELECT DISTINCT k.id, k.imie, k.nazwisko, k.email, k.telefon, k.plec, k.cv_path, a.Ofertaid, a.status
+      SELECT DISTINCT k.id, k.imie, k.nazwisko, k.email, k.telefon, k.plec, k.cv_path, a.Ofertaid, a.status,
+      kk.KategoriaKandydataid, kat.nazwa AS kategoria_nazwa
       FROM kandydat k
       JOIN aplikacja a ON k.id = a.Kandydatid
       JOIN oferta o ON a.Ofertaid = o.id
+      LEFT JOIN kandydat_kategoriakandydata kk ON k.id = kk.Kandydatid
+      LEFT JOIN kategoriakandydata kat ON kk.KategoriaKandydataid = kat.id AND kat.PracownikHRid = ?
       WHERE o.PracownikHRid = ?
     `;
-    const queryParams = [PracownikHRid];
+    const queryParams = [PracownikHRid, PracownikHRid];
     // Filtrowanie po statusie
-    if (status && ['rozpatrywana', 'zaakceptowana', 'odrzucona'].includes(status)) {
+    if (status && ['oczekujaca', 'odrzucona', 'zakceptowana'].includes(status)) {
       query += ' AND a.status = ?';
       queryParams.push(status);
+    }
+    // Filtrowanie po kategorii
+    if (kategoria) {
+      query += ' AND kk.KategoriaKandydataid = ?';
+      queryParams.push(kategoria);
     }
     // Sortowanie
     if (sortBy && ['imie', 'nazwisko'].includes(sortBy)) {
@@ -122,7 +156,7 @@ router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
 router.put('/:Kandydatid/:Ofertaid/status', authMiddleware, async (req, res) => {
   const { Kandydatid, Ofertaid } = req.params;
   const { status } = req.body;
-  if (!status || !['rozpatrywana', 'zaakceptowana', 'odrzucona'].includes(status)) {
+  if (!status || !['oczekujaca', 'odrzucona', 'zakceptowana'].includes(status)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
@@ -166,6 +200,37 @@ router.delete('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Aplikacja nie znaleziona' });
     }
     res.json({ message: 'Aplikacja usunięta' });
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// DELETE - Usunięcie wszystkich aplikacji kandydata dla pracownika HR (zabezpieczone)
+router.delete('/pracownikHR/:PracownikHRid/kandydat/:Kandydatid', authMiddleware, async (req, res) => {
+  const { PracownikHRid, Kandydatid } = req.params;
+  try {
+    // Sprawdzenie uprawnień
+    if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid)) {
+      return res.status(403).json({ error: 'Brak uprawnień do usuwania aplikacji' });
+    }
+    // Sprawdzenie, czy PracownikHRid istnieje
+    const [pracownikHR] = await pool.query('SELECT id FROM pracownikHR WHERE id = ?', [PracownikHRid]);
+    if (pracownikHR.length === 0) {
+      return res.status(400).json({ error: 'Podany pracownik HR nie istnieje' });
+    }
+    // Sprawdzenie, czy kandydat istnieje
+    const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
+    if (kandydat.length === 0) {
+      return res.status(400).json({ error: 'Podany kandydat nie istnieje' });
+    }
+    // Usunięcie wszystkich aplikacji kandydata na oferty pracownika HR
+    const [result] = await pool.query(
+      'DELETE a FROM aplikacja a ' +
+      'JOIN oferta o ON a.Ofertaid = o.id ' +
+      'WHERE a.Kandydatid = ? AND o.PracownikHRid = ?',
+      [Kandydatid, PracownikHRid]
+    );
+    res.json({ message: `Usunięto ${result.affectedRows} aplikacji kandydata` });
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
   }

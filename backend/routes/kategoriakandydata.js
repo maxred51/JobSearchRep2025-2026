@@ -39,16 +39,41 @@ router.post('/', authMiddleware, async (req, res) => {
 
 // READ - Pobieranie wszystkich kategorii kandydatów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
+  const { sortBy, sortOrder } = req.query;
   try {
-    // Ograniczamy wyniki do kategorii należących do zalogowanego pracownika HR
     if (req.user.role === 'pracownikHR') {
-      const [rows] = await pool.query(
-        'SELECT * FROM kategoriakandydata WHERE PracownikHRid = ?',
-        [req.user.id]
-      );
+      let query = `
+        SELECT k.id, k.nazwa, k.PracownikHRid, 
+               COUNT(kk.Kandydatid) AS liczba_kandydatow
+        FROM kategoriakandydata k
+        LEFT JOIN kandydat_kategoriakandydata kk ON k.id = kk.KategoriaKandydataid
+        WHERE k.PracownikHRid = ?
+        GROUP BY k.id, k.nazwa, k.PracownikHRid
+      `;
+      const queryParams = [req.user.id];
+
+      // Sortowanie
+      if (sortBy === 'nazwa') {
+        const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+        query += ` ORDER BY k.nazwa ${order}`;
+      }
+
+      const [rows] = await pool.query(query, queryParams);
       res.json(rows);
     } else if (req.user.role === 'administrator') {
-      const [rows] = await pool.query('SELECT * FROM kategoriakandydata');
+      let query = `
+        SELECT k.id, k.nazwa, k.PracownikHRid, 
+               COUNT(kk.Kandydatid) AS liczba_kandydatow
+        FROM kategoriakandydata k
+        LEFT JOIN kandydat_kategoriakandydata kk ON k.id = kk.KategoriaKandydataid
+        GROUP BY k.id, k.nazwa, k.PracownikHRid
+      `;
+      if (sortBy === 'nazwa') {
+        const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+        query += ` ORDER BY k.nazwa ${order}`;
+      }
+
+      const [rows] = await pool.query(query);
       res.json(rows);
     } else {
       return res.status(403).json({ error: 'Brak uprawnień' });
@@ -62,7 +87,14 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query('SELECT * FROM kategoriakandydata WHERE id = ?', [id]);
+    const [rows] = await pool.query(
+      'SELECT k.id, k.nazwa, k.PracownikHRid, COUNT(kk.Kandydatid) AS liczba_kandydatow ' +
+      'FROM kategoriakandydata k ' +
+      'LEFT JOIN kandydat_kategoriakandydata kk ON k.id = kk.KategoriaKandydataid ' +
+      'WHERE k.id = ? ' +
+      'GROUP BY k.id, k.nazwa, k.PracownikHRid',
+      [id]
+    );
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Kategoria nie znaleziona' });
     }

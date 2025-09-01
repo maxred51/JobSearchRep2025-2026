@@ -92,6 +92,53 @@ router.get('/:Kandydatid/:KategoriaKandydataid', authMiddleware, async (req, res
   }
 });
 
+// UPDATE - Aktualizacja kategorii kandydata (zabezpieczone)
+router.put('/:Kandydatid', authMiddleware, async (req, res) => {
+  const { Kandydatid } = req.params;
+  const { KategoriaKandydataid } = req.body;
+  if (!KategoriaKandydataid) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  try {
+    // Sprawdzenie, czy kandydat istnieje
+    const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
+    if (kandydat.length === 0) {
+      return res.status(400).json({ error: 'Podany kandydat nie istnieje' });
+    }
+    // Sprawdzenie, czy kategoria istnieje i należy do zalogowanego pracownika HR
+    const [kategoria] = await pool.query('SELECT * FROM kategoriakandydata WHERE id = ?', [KategoriaKandydataid]);
+    if (kategoria.length === 0) {
+      return res.status(400).json({ error: 'Podana kategoria nie istnieje' });
+    }
+    if (req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
+      return res.status(403).json({ error: 'Brak uprawnień do tej kategorii' });
+    }
+    // Sprawdzenie, czy kandydat aplikował na ofertę należącą do pracownika HR
+    const [aplikacja] = await pool.query(
+      'SELECT a.* FROM aplikacja a ' +
+      'JOIN oferta o ON a.Ofertaid = o.id ' +
+      'WHERE a.Kandydatid = ? AND o.PracownikHRid = ?',
+      [Kandydatid, kategoria[0].PracownikHRid]
+    );
+    if (req.user.role === 'pracownikHR' && aplikacja.length === 0) {
+      return res.status(403).json({ error: 'Kandydat nie aplikował na ofertę należącą do tego pracownika HR' });
+    }
+    // Usunięcie istniejącego powiązania
+    await pool.query('DELETE FROM kandydat_kategoriakandydata WHERE Kandydatid = ?', [Kandydatid]);
+    // Dodanie nowego powiązania
+    const [result] = await pool.query(
+      'INSERT INTO kandydat_kategoriakandydata (Kandydatid, KategoriaKandydataid) VALUES (?, ?)',
+      [Kandydatid, KategoriaKandydataid]
+    );
+    res.json({ Kandydatid, KategoriaKandydataid });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Powiązanie już istnieje' });
+    }
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 // DELETE - Usunięcie powiązania kandydat-kategoria (zabezpieczone)
 router.delete('/:Kandydatid/:KategoriaKandydataid', authMiddleware, async (req, res) => {
   const { Kandydatid, KategoriaKandydataid } = req.params;
