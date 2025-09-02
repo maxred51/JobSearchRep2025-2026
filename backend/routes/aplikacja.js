@@ -5,9 +5,9 @@ const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Dodanie nowej aplikacji
 router.post('/', authMiddleware, async (req, res) => {
-  const { Kandydatid, Ofertaid } = req.body;
-  if (!Kandydatid || !Ofertaid) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  const { Kandydatid, Ofertaid, kwota, odpowiedz } = req.body;
+  if (!Kandydatid || !Ofertaid || !kwota || !odpowiedz) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane: wymagane Kandydatid, Ofertaid, kwota i odpowiedz' });
   }
   try {
     const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
@@ -22,10 +22,10 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Brak uprawnień do tej oferty' });
     }
     const [result] = await pool.query(
-      'INSERT INTO aplikacja (Kandydatid, Ofertaid, status) VALUES (?, ?, "oczekujaca")',
-      [Kandydatid, Ofertaid]
+      'INSERT INTO aplikacja (Kandydatid, Ofertaid, status, kwota, odpowiedz) VALUES (?, ?, "oczekujaca", ?, ?)',
+      [Kandydatid, Ofertaid, kwota, odpowiedz]
     );
-    res.status(201).json({ Kandydatid, Ofertaid, status: "oczekujaca" });
+    res.status(201).json({ Kandydatid, Ofertaid, status: "oczekujaca", kwota, odpowiedz });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Aplikacja już istnieje' });
@@ -38,9 +38,34 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   const { sortBy, sortOrder, status } = req.query;
   try {
-    if (req.user.role === 'pracownikHR') {
+    if (req.user.role === 'kandydat') {
       let query = `
-        SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, 
+        SELECT o.tytuł, f.nazwa AS nazwa_firmy, o.opis, o.wymagania
+        FROM aplikacja a
+        JOIN oferta o ON a.Ofertaid = o.id
+        JOIN pracownikHR p ON o.PracownikHRid = p.id
+        JOIN firma f ON p.Firmaid = f.id
+        WHERE a.Kandydatid = ?
+      `;
+      const queryParams = [req.user.id];
+
+      // Filtrowanie po statusie dla kandydata
+      if (status && ['oczekujaca', 'odrzucona', 'zakceptowana'].includes(status)) {
+        query += ' AND a.status = ?';
+        queryParams.push(status);
+      }
+
+      // Sortowanie dla kandydata
+      if (sortBy === 'tytuł') {
+        const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+        query += ` ORDER BY o.tytuł ${order}`;
+      }
+
+      const [rows] = await pool.query(query, queryParams);
+      res.json(rows);
+    } else if (req.user.role === 'pracownikHR') {
+      let query = `
+        SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, a.kwota, a.odpowiedz,
                o.tytuł AS stanowisko, k.imie, k.nazwisko
         FROM aplikacja a
         JOIN oferta o ON a.Ofertaid = o.id
@@ -65,7 +90,7 @@ router.get('/', authMiddleware, async (req, res) => {
       res.json(rows);
     } else if (req.user.role === 'administrator') {
       const [rows] = await pool.query(`
-        SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, 
+        SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, a.kwota, a.odpowiedz,
                o.tytuł AS stanowisko, k.imie, k.nazwisko
         FROM aplikacja a
         JOIN oferta o ON a.Ofertaid = o.id
@@ -85,7 +110,8 @@ router.get('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
   const { Kandydatid, Ofertaid } = req.params;
   try {
     const [rows] = await pool.query(
-      'SELECT a.*, o.tytuł AS stanowisko, k.imie, k.nazwisko ' +
+      'SELECT a.id, a.status, a.Kandydatid, a.Ofertaid, a.kwota, a.odpowiedz, ' +
+      'o.tytuł AS stanowisko, k.imie, k.nazwisko, k.telefon, k.email ' +
       'FROM aplikacja a ' +
       'JOIN oferta o ON a.Ofertaid = o.id ' +
       'JOIN kandydat k ON a.Kandydatid = k.id ' +
@@ -95,7 +121,12 @@ router.get('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Aplikacja nie znaleziona' });
     }
-    if (req.user.role === 'pracownikHR' && rows[0].PracownikHRid !== req.user.id) {
+    if (req.user.role === 'pracownikHR') {
+      const [oferta] = await pool.query('SELECT PracownikHRid FROM oferta WHERE id = ?', [Ofertaid]);
+      if (oferta[0].PracownikHRid !== req.user.id) {
+        return res.status(403).json({ error: 'Brak uprawnień do tej aplikacji' });
+      }
+    } else if (req.user.role === 'kandydat' && parseInt(Kandydatid) !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do tej aplikacji' });
     }
     res.json(rows[0]);
