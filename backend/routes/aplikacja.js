@@ -14,17 +14,35 @@ router.post('/', authMiddleware, async (req, res) => {
     if (kandydat.length === 0) {
       return res.status(400).json({ error: 'Podany kandydat nie istnieje' });
     }
-    const [oferta] = await pool.query('SELECT id, PracownikHRid FROM oferta WHERE id = ?', [Ofertaid]);
+    const [oferta] = await pool.query(
+      'SELECT o.id, o.PracownikHRid, p.Firmaid ' +
+      'FROM oferta o ' +
+      'JOIN pracownikHR p ON o.PracownikHRid = p.id ' +
+      'WHERE o.id = ?',
+      [Ofertaid]
+    );
     if (oferta.length === 0) {
       return res.status(400).json({ error: 'Podana oferta nie istnieje' });
     }
     if (req.user.role === 'pracownikHR' && oferta[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do tej oferty' });
     }
+    // Dodanie rekordu do tabeli aplikacja
     const [result] = await pool.query(
       'INSERT INTO aplikacja (Kandydatid, Ofertaid, status, kwota, odpowiedz) VALUES (?, ?, "oczekujaca", ?, ?)',
       [Kandydatid, Ofertaid, kwota, odpowiedz]
     );
+    // Dodanie rekordu do tabeli opinia, jeśli nie istnieje
+    const [existingOpinia] = await pool.query(
+      'SELECT * FROM opinia WHERE Kandydatid = ? AND Firmaid = ?',
+      [Kandydatid, oferta[0].Firmaid]
+    );
+    if (existingOpinia.length === 0) {
+      await pool.query(
+        'INSERT INTO opinia (Kandydatid, Firmaid, tresc) VALUES (?, ?, ?)',
+        [Kandydatid, oferta[0].Firmaid, '']
+      );
+    }
     res.status(201).json({ Kandydatid, Ofertaid, status: "oczekujaca", kwota, odpowiedz });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -82,7 +100,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
       // Sortowanie
       if (sortBy === 'stanowisko') {
-        const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+        const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'ASC' : 'ASC';
         query += ` ORDER BY o.tytuł ${order}`;
       }
 
