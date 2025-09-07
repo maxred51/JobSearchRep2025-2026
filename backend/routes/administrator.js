@@ -120,4 +120,117 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// READ - Pobieranie wszystkich użytkowników (kandydaci i pracownicy HR) (zabezpieczone)
+router.get('/uzytkownicy', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+  const { rola, sortBy, sortOrder } = req.query;
+  try {
+    let query = `
+      SELECT id, imie, nazwisko, 'Kandydat' AS rola, stan FROM kandydat
+      UNION
+      SELECT id, imie, nazwisko, 'HR' AS rola, stan FROM pracownikHR
+    `;
+    const queryParams = [];
+
+    // Filtrowanie po roli
+    if (rola && ['Kandydat', 'HR'].includes(rola)) {
+      query = `
+        SELECT id, imie, nazwisko, '${rola}' AS rola, stan
+        FROM ${rola === 'Kandydat' ? 'kandydat' : 'pracownikHR'}
+      `;
+    }
+
+    // Sortowanie
+    if (sortBy && ['imie', 'nazwisko'].includes(sortBy)) {
+      const order = sortOrder && sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+      query += ` ORDER BY ${sortBy} ${order}`;
+    }
+
+    const [rows] = await pool.query(query, queryParams);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// READ - Pobieranie szczegółów użytkownika po ID (zabezpieczone)
+router.get('/uzytkownicy/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+  const { id } = req.params;
+  try {
+    // Sprawdzenie w tabeli kandydat
+    let [rows] = await pool.query(
+      'SELECT id, imie, nazwisko, email, telefon, stan, "Kandydat" AS rola, ' +
+      '(SELECT COUNT(*) FROM aplikacja WHERE Kandydatid = ?) AS ilosc_aplikacji, ' +
+      '(SELECT COUNT(*) FROM opinia WHERE Kandydatid = ?) AS ilosc_opinii, ' +
+      '0 AS ilosc_ofert ' +
+      'FROM kandydat WHERE id = ?',
+      [id, id, id]
+    );
+    
+    if (rows.length > 0) {
+      return res.json(rows[0]);
+    }
+
+    // Sprawdzenie w tabeli pracownikHR
+    [rows] = await pool.query(
+      'SELECT id, imie, nazwisko, email, telefon, stan, "HR" AS rola, ' +
+      '0 AS ilosc_aplikacji, ' +
+      '0 AS ilosc_opinii, ' +
+      '(SELECT COUNT(*) FROM oferta WHERE PracownikHRid = ?) AS ilosc_ofert ' +
+      'FROM pracownikHR WHERE id = ?',
+      [id, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
+    }
+    
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// UPDATE - Zmiana statusu użytkownika (zabezpieczone)
+router.put('/uzytkownicy/:id/status', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+  const { id } = req.params;
+  const { stan } = req.body;
+  if (!stan || !['aktywny', 'zablokowany'].includes(stan)) {
+    return res.status(400).json({ error: 'Nieprawidłowy status' });
+  }
+  try {
+    // Sprawdzenie w tabeli kandydat
+    let [result] = await pool.query(
+      'UPDATE kandydat SET stan = ? WHERE id = ?',
+      [stan, id]
+    );
+    
+    if (result.affectedRows > 0) {
+      return res.json({ id, stan });
+    }
+
+    // Sprawdzenie w tabeli pracownikHR
+    [result] = await pool.query(
+      'UPDATE pracownikHR SET stan = ? WHERE id = ?',
+      [stan, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
+    }
+    
+    res.json({ id, stan });
+  } catch (error) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 module.exports = router;

@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(haslo, 10);
     const [result] = await pool.query(
-      'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec, cv_path) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec, cv_path, stan) VALUES (?, ?, ?, ?, ?, ?, ?, "aktywny")',
       [imie, nazwisko, telefon, email, hashedPassword, plec, cv_path || null]
     );
     res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec, cv_path });
@@ -35,11 +35,14 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
-    const [rows] = await pool.query('SELECT * FROM kandydat WHERE email = ?', [email]);
+    const [rows] = await pool.query('SELECT id, email, haslo, stan FROM kandydat WHERE email = ?', [email]);
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Nieprawidłowy email lub hasło' });
     }
     const user = rows[0];
+    if (user.stan === 'zablokowany') {
+      return res.status(403).json({ error: 'Konto zablokowane' });
+    }
     const isMatch = await bcrypt.compare(haslo, user.haslo);
     if (!isMatch) {
       return res.status(401).json({ error: 'Nieprawidłowy email lub hasło' });

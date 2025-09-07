@@ -14,10 +14,10 @@ router.post('/', authMiddleware, async (req, res) => {
   }
   try {
     const [result] = await pool.query(
-      'INSERT INTO oferta (tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)',
+      'INSERT INTO oferta (tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, CURRENT_DATE)',
       [tytuł, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, req.user.id, KategoriaPracyid]
     );
-    res.status(201).json({ id: result.insertId, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna: true });
+    res.status(201).json({ id: result.insertId, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna: true, data: new Date().toISOString().split('T')[0] });
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana kategoria pracy nie istnieje' });
@@ -26,61 +26,113 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// READ - Pobieranie wszystkich ofert
-router.get('/', async (req, res) => {
+// READ - Pobieranie wszystkich ofert (dla administratora i publiczne)
+router.get('/', authMiddleware, async (req, res) => {
   const { kategoriaPracy, poziom, wymiar, tryb, umowa } = req.query;
   try {
-    let query = `
-      SELECT o.id, o.tytuł, o.lokalizacja, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
-      FROM oferta o
-      JOIN pracownikHR p ON o.PracownikHRid = p.id
-      JOIN firma f ON p.Firmaid = f.id
-      WHERE o.aktywna = TRUE
-    `;
-    const queryParams = [];
+    if (req.user.role === 'administrator') {
+      let query = `
+        SELECT o.id, o.tytuł, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
+        FROM oferta o
+        JOIN pracownikHR p ON o.PracownikHRid = p.id
+        JOIN firma f ON p.Firmaid = f.id
+      `;
+      const queryParams = [];
 
-    // Filtrowanie po kategorii pracy
-    if (kategoriaPracy) {
-      query += ' AND o.KategoriaPracyid = ?';
-      queryParams.push(kategoriaPracy);
-    }
+      // Filtrowanie po kategorii pracy
+      if (kategoriaPracy) {
+        query += ' AND o.KategoriaPracyid = ?';
+        queryParams.push(kategoriaPracy);
+      }
 
-    // Filtrowanie po cechach
-    if (poziom) {
-      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_poziom WHERE Poziomid = ?)';
-      queryParams.push(poziom);
-    }
-    if (wymiar) {
-      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_wymiar WHERE Wymiarid = ?)';
-      queryParams.push(wymiar);
-    }
-    if (tryb) {
-      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_tryb WHERE Trybid = ?)';
-      queryParams.push(tryb);
-    }
-    if (umowa) {
-      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_umowa WHERE Umowaid = ?)';
-      queryParams.push(umowa);
-    }
+      // Filtrowanie po cechach
+      if (poziom) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_poziom WHERE Poziomid = ?)';
+        queryParams.push(poziom);
+      }
+      if (wymiar) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_wymiar WHERE Wymiarid = ?)';
+        queryParams.push(wymiar);
+      }
+      if (tryb) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_tryb WHERE Trybid = ?)';
+        queryParams.push(tryb);
+      }
+      if (umowa) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_umowa WHERE Umowaid = ?)';
+        queryParams.push(umowa);
+      }
 
-    const [rows] = await pool.query(query, queryParams);
-    res.json(rows);
+      const [rows] = await pool.query(query, queryParams);
+      res.json(rows);
+    } else {
+      let query = `
+        SELECT o.id, o.tytuł, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
+        FROM oferta o
+        JOIN pracownikHR p ON o.PracownikHRid = p.id
+        JOIN firma f ON p.Firmaid = f.id
+        WHERE o.aktywna = TRUE
+      `;
+      const queryParams = [];
+
+      // Filtrowanie po kategorii pracy
+      if (kategoriaPracy) {
+        query += ' AND o.KategoriaPracyid = ?';
+        queryParams.push(kategoriaPracy);
+      }
+
+      // Filtrowanie po cechach
+      if (poziom) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_poziom WHERE Poziomid = ?)';
+        queryParams.push(poziom);
+      }
+      if (wymiar) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_wymiar WHERE Wymiarid = ?)';
+        queryParams.push(wymiar);
+      }
+      if (tryb) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_tryb WHERE Trybid = ?)';
+        queryParams.push(tryb);
+      }
+      if (umowa) {
+        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_umowa WHERE Umowaid = ?)';
+        queryParams.push(umowa);
+      }
+
+      const [rows] = await pool.query(query, queryParams);
+      res.json(rows);
+    }
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
 
-// READ - Pobieranie oferty po ID
-router.get('/:id', async (req, res) => {
+// READ - Pobieranie oferty po ID (dla administratora i publiczne)
+router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await pool.query(
-      'SELECT o.*, f.nazwa AS nazwa_firmy, kp.nazwa AS nazwa_kategorii_pracy ' +
+      'SELECT o.*, f.nazwa AS nazwa_firmy, kp.nazwa AS nazwa_kategorii_pracy, ' +
+      'p.imie AS hr_imie, p.nazwisko AS hr_nazwisko, ' +
+      'GROUP_CONCAT(DISTINCT po.nazwa) AS poziomy, ' +
+      'GROUP_CONCAT(DISTINCT w.nazwa) AS wymiary, ' +
+      'GROUP_CONCAT(DISTINCT t.nazwa) AS tryby, ' +
+      'GROUP_CONCAT(DISTINCT u.nazwa) AS umowy ' +
       'FROM oferta o ' +
       'JOIN pracownikHR p ON o.PracownikHRid = p.id ' +
       'JOIN firma f ON p.Firmaid = f.id ' +
       'JOIN kategoriapracy kp ON o.KategoriaPracyid = kp.id ' +
-      'WHERE o.id = ? AND o.aktywna = TRUE',
+      'LEFT JOIN oferta_poziom op ON o.id = op.Ofertaid ' +
+      'LEFT JOIN poziom po ON op.Poziomid = po.id ' +
+      'LEFT JOIN oferta_wymiar ow ON o.id = ow.Ofertaid ' +
+      'LEFT JOIN wymiar w ON ow.Wymiarid = w.id ' +
+      'LEFT JOIN oferta_tryb ot ON o.id = ot.Ofertaid ' +
+      'LEFT JOIN tryb t ON ot.Trybid = t.id ' +
+      'LEFT JOIN oferta_umowa ou ON o.id = ou.Ofertaid ' +
+      'LEFT JOIN umowa u ON ou.Umowaid = u.id ' +
+      'WHERE o.id = ? ' +
+      (req.user.role === 'administrator' ? '' : 'AND o.aktywna = TRUE') +
+      ' GROUP BY o.id',
       [id]
     );
     if (rows.length === 0) {
@@ -117,22 +169,22 @@ router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
 
 // UPDATE - Aktualizacja oferty
 router.put('/:id', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'pracownikHR') {
-    return res.status(403).json({ error: 'Brak uprawnień' });
-  }
   const { id } = req.params;
   const { tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid, aktywna } = req.body;
   if (!tytuł || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid || aktywna === undefined) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
-    // Weryfikacja, czy oferta należy do pracownika HR
+    // Weryfikacja, czy oferta należy do pracownika HR lub użytkownik jest administratorem
     const [oferta] = await pool.query('SELECT PracownikHRid FROM oferta WHERE id = ?', [id]);
     if (oferta.length === 0) {
       return res.status(404).json({ error: 'Oferta nie znaleziona' });
     }
-    if (oferta[0].PracownikHRid !== req.user.id) {
+    if (req.user.role === 'pracownikHR' && oferta[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do edycji tej oferty' });
+    }
+    if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
+      return res.status(403).json({ error: 'Brak uprawnień' });
     }
     const [result] = await pool.query(
       'UPDATE oferta SET tytuł = ?, opis = ?, wynagrodzenie = ?, wymagania = ?, lokalizacja = ?, czas = ?, KategoriaPracyid = ?, aktywna = ? WHERE id = ?',
@@ -141,7 +193,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Oferta nie znaleziona' });
     }
-    res.json({ id, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna });
+    res.json({ id, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: oferta[0].PracownikHRid, KategoriaPracyid, aktywna });
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana kategoria pracy nie istnieje' });
@@ -152,17 +204,17 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
 // DELETE - Usunięcie oferty
 router.delete('/:id', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'pracownikHR') {
-    return res.status(403).json({ error: 'Brak uprawnień' });
-  }
   const { id } = req.params;
   try {
     const [oferta] = await pool.query('SELECT PracownikHRid FROM oferta WHERE id = ?', [id]);
     if (oferta.length === 0) {
       return res.status(404).json({ error: 'Oferta nie znaleziona' });
     }
-    if (oferta[0].PracownikHRid !== req.user.id) {
+    if (req.user.role === 'pracownikHR' && oferta[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do usunięcia tej oferty' });
+    }
+    if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
+      return res.status(403).json({ error: 'Brak uprawnień' });
     }
     const [result] = await pool.query('DELETE FROM oferta WHERE id = ?', [id]);
     if (result.affectedRows === 0) {
