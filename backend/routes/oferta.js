@@ -13,15 +13,75 @@ router.post('/', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   try {
+    // 1. Zapis oferty
     const [result] = await pool.query(
       'INSERT INTO oferta (tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, CURRENT_DATE)',
       [tytuł, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, req.user.id, KategoriaPracyid]
     );
-    res.status(201).json({ id: result.insertId, tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid: req.user.id, KategoriaPracyid, aktywna: true, data: new Date().toISOString().split('T')[0] });
+
+    const ofertaId = result.insertId;
+
+    // 2. Pobranie danych HR i firmy
+    const [[hrRow]] = await pool.query(
+      `SELECT p.imie, p.nazwisko, f.nazwa AS firma
+       FROM pracownikHR p
+       JOIN firma f ON p.Firmaid = f.id
+       WHERE p.id = ?`,
+      [req.user.id]
+    );
+
+    const firmaId = hrRow ? hrRow.Firmaid : null;
+
+    // 3. Kandydaci obserwujący firmę
+    const [kandydaci] = await pool.query(
+      'SELECT Kandydatid FROM obserwowana_firma WHERE Firmaid = ?',
+      [hrRow.Firmaid]
+    );
+
+    const io = req.app.get('io');
+
+    // 4. Dodanie powiadomień + wysłanie przez Socket.IO do kandydatów
+    for (const kandydat of kandydaci) {
+      const tresc = `Dodano ofertę w firmie ${hrRow.firma}: ${tytuł}`;
+      const [notifResult] = await pool.query(
+        'INSERT INTO powiadomienie (typ, tresc, Kandydatid, Ofertaid) VALUES ("oferta", ?, ?, ?)',
+        [tresc, kandydat.Kandydatid, ofertaId]
+      );
+
+      io.emit(`powiadomienie-${kandydat.Kandydatid}`, {
+        id: notifResult.insertId,
+        tresc,
+        ofertaId,
+        przeczytane: false,
+        data: new Date()
+      });
+    }
+
+    // 5. Dodanie powiadomienia systemowego dla administratora
+    const trescAdmin = `Dodano ofertę: ${tytuł} w firmie ${hrRow.firma} przez ${hrRow.imie} ${hrRow.nazwisko}`;
+    await pool.query(
+      'INSERT INTO powiadomienie (typ, tresc, Ofertaid) VALUES ("system", ?, ?)',
+      [trescAdmin, ofertaId]
+    );
+
+    res.status(201).json({
+      id: ofertaId,
+      tytuł,
+      opis,
+      wynagrodzenie,
+      wymagania,
+      lokalizacja,
+      czas,
+      PracownikHRid: req.user.id,
+      KategoriaPracyid,
+      aktywna: true,
+      data: new Date().toISOString().split('T')[0]
+    });
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({ error: 'Podana kategoria pracy nie istnieje' });
     }
+    console.error(error);
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });

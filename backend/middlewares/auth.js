@@ -7,11 +7,11 @@ const authMiddleware = async (req, res, next) => {
   if (!token) {
     return res.status(401).json({ error: 'Brak tokenu, autoryzacja odmówiona' });
   }
+
   try {
     const decoded = jwt.verify(token, config.secret);
-    req.user = decoded; // Dodaje zdekodowane dane użytkownika do żądania
+    req.user = decoded; // np. { id: 3, role: 'kandydat' }
 
-    // Sprawdzenie statusu użytkownika (stan) dla ról kandydat i HR
     if (decoded.role === 'kandydat') {
       const [rows] = await pool.query('SELECT stan FROM kandydat WHERE id = ?', [decoded.id]);
       if (rows.length === 0) {
@@ -20,7 +20,7 @@ const authMiddleware = async (req, res, next) => {
       if (rows[0].stan === 'zablokowany') {
         return res.status(403).json({ error: 'Konto zablokowane' });
       }
-    } else if (decoded.role === 'HR') {
+    } else if (decoded.role === 'pracownikHR') {
       const [rows] = await pool.query('SELECT stan FROM pracownikHR WHERE id = ?', [decoded.id]);
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
@@ -28,12 +28,15 @@ const authMiddleware = async (req, res, next) => {
       if (rows[0].stan === 'zablokowany') {
         return res.status(403).json({ error: 'Konto zablokowane' });
       }
+    } else if (decoded.role === 'administrator') {
+      // Administratorzy nie mają pola "stan"
+    } else {
+      return res.status(400).json({ error: 'Nieprawidłowa rola użytkownika' });
     }
-    
 
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Nieprawidłowy token' });
+    return res.status(401).json({ error: 'Nieprawidłowy token' });
   }
 };
 

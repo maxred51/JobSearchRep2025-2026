@@ -17,11 +17,22 @@ router.post('/', async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Email lub telefon już istnieje' });
     }
+
     const hashedPassword = await bcrypt.hash(haslo, 10);
     const [result] = await pool.query(
       'INSERT INTO pracownikHR (imie, nazwisko, telefon, email, haslo, plec, Firmaid, stan) VALUES (?, ?, ?, ?, ?, ?, ?, "aktywny")',
       [imie, nazwisko, telefon, email, hashedPassword, plec, Firmaid]
     );
+
+    // Dodanie powiadomienia systemowego dla administratora
+    await pool.query(
+      'INSERT INTO powiadomienie (typ, tresc) VALUES (?, ?)',
+      [
+        'system',
+        `Nowy pracownik HR: ${imie} ${nazwisko} (ID: ${result.insertId})`
+      ]
+    );
+
     res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec, Firmaid });
   } catch (error) {
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {

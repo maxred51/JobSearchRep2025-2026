@@ -17,11 +17,23 @@ router.post('/', async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Email lub telefon już istnieje' });
     }
+
     const hashedPassword = await bcrypt.hash(haslo, 10);
     const [result] = await pool.query(
       'INSERT INTO kandydat (imie, nazwisko, telefon, email, haslo, plec, cv_path, stan) VALUES (?, ?, ?, ?, ?, ?, ?, "aktywny")',
       [imie, nazwisko, telefon, email, hashedPassword, plec, cv_path || null]
     );
+
+    // Dodanie powiadomienia systemowego dla administratora
+    await pool.query(
+      'INSERT INTO powiadomienie (typ, tresc, Kandydatid) VALUES (?, ?, ?)',
+      [
+        'system',
+        `Nowy kandydat: ${imie} ${nazwisko} (ID: ${result.insertId})`,
+        result.insertId
+      ]
+    );
+
     res.status(201).json({ id: result.insertId, imie, nazwisko, telefon, email, plec, cv_path });
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
