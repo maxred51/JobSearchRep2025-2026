@@ -9,8 +9,23 @@ const authMiddleware = require('../middlewares/auth');
 // CREATE - Rejestracja nowego pracownika HR
 router.post('/', async (req, res) => {
   const { imie, nazwisko, telefon, email, haslo, plec, Firmaid } = req.body;
+  // Walidacja danych
   if (!imie || !nazwisko || !telefon || !email || !haslo || !plec || !['M', 'K'].includes(plec) || !Firmaid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (imie.length > 50 || nazwisko.length > 50 || telefon.length > 50 || email.length > 50) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu emaila
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
+  }
+  // Walidacja formatu telefonu
+  const phoneRegex = /^\+?[1-9]\d{7,14}$/;
+  if (!phoneRegex.test(telefon)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format telefonu' });
   }
   try {
     const [existing] = await pool.query('SELECT * FROM pracownikHR WHERE email = ? OR telefon = ?', [email, telefon]);
@@ -70,6 +85,9 @@ router.post('/login', async (req, res) => {
 
 // READ - Pobieranie wszystkich pracowników HR (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator' && req.user.role !== 'pracownikHR') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   try {
     const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid FROM pracownikHR');
     res.json(rows);
@@ -81,6 +99,9 @@ router.get('/', authMiddleware, async (req, res) => {
 // READ - Pobieranie pracownika HR po ID (zabezpieczone)
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  if (req.user.role !== 'administrator' && (req.user.role !== 'pracownikHR' || req.user.id !== parseInt(id))) {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   try {
     const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid FROM pracownikHR WHERE id = ?', [id]);
     if (rows.length === 0) {
@@ -96,11 +117,26 @@ router.get('/:id', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { imie, nazwisko, telefon, email, haslo, plec, Firmaid } = req.body;
-  if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(id)) {
+  if (req.user.role !== 'administrator' && (req.user.role !== 'pracownikHR' || req.user.id !== parseInt(id))) {
     return res.status(403).json({ error: 'Brak uprawnień do edycji tego konta' });
   }
+  // Walidacja danych
   if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec) || !Firmaid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (imie.length > 50 || nazwisko.length > 50 || telefon.length > 50 || email.length > 50) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu emaila
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
+  }
+  // Walidacja formatu telefonu
+  const phoneRegex = /^\+?[1-9]\d{7,14}$/;
+  if (!phoneRegex.test(telefon)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format telefonu' });
   }
   try {
     const [existing] = await pool.query('SELECT * FROM pracownikHR WHERE (email = ? OR telefon = ?) AND id != ?', [email, telefon, id]);

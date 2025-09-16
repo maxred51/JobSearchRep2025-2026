@@ -9,8 +9,18 @@ const authMiddleware = require('../middlewares/auth');
 // CREATE - Rejestracja nowego administratora
 router.post('/', async (req, res) => {
   const { imie, nazwisko, plec, email, haslo } = req.body;
+  // Walidacja danych
   if (!imie || !nazwisko || !plec || !['M', 'K'].includes(plec) || !email || !haslo) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (imie.length > 50 || nazwisko.length > 50 || email.length > 50) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu emaila
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
   }
   try {
     const [existing] = await pool.query('SELECT * FROM administrator WHERE email = ?', [email]);
@@ -53,6 +63,9 @@ router.post('/login', async (req, res) => {
 
 // READ - Pobieranie wszystkich administratorów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   try {
     const [rows] = await pool.query('SELECT id, imie, nazwisko, plec, email FROM administrator');
     res.json(rows);
@@ -63,6 +76,9 @@ router.get('/', authMiddleware, async (req, res) => {
 
 // READ - Pobieranie administratora po ID (zabezpieczone)
 router.get('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   const { id } = req.params;
   try {
     const [rows] = await pool.query('SELECT id, imie, nazwisko, plec, email FROM administrator WHERE id = ?', [id]);
@@ -77,10 +93,23 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 // UPDATE - Aktualizacja administratora (zabezpieczone)
 router.put('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   const { id } = req.params;
   const { imie, nazwisko, plec, email, haslo } = req.body;
+  // Walidacja danych
   if (!imie || !nazwisko || !plec || !['M', 'K'].includes(plec) || !email) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (imie.length > 50 || nazwisko.length > 50 || email.length > 50) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu emaila
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
   }
   try {
     const [existing] = await pool.query('SELECT * FROM administrator WHERE email = ? AND id != ?', [email, id]);
@@ -108,6 +137,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
 // DELETE - Usunięcie administratora (zabezpieczone)
 router.delete('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   const { id } = req.params;
   try {
     const [result] = await pool.query('DELETE FROM administrator WHERE id = ?', [id]);
@@ -120,6 +152,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Użytkownicy")
 // READ - Pobieranie wszystkich użytkowników (kandydaci i pracownicy HR) (zabezpieczone)
 router.get('/uzytkownicy', authMiddleware, async (req, res) => {
   if (req.user.role !== 'administrator') {
@@ -155,6 +188,7 @@ router.get('/uzytkownicy', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Użytkownicy")
 // READ - Pobieranie szczegółów użytkownika po ID (zabezpieczone)
 router.get('/uzytkownicy/:id', authMiddleware, async (req, res) => {
   if (req.user.role !== 'administrator') {
@@ -196,6 +230,7 @@ router.get('/uzytkownicy/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Użytkownicy")
 // UPDATE - Zmiana statusu użytkownika (zabezpieczone)
 router.put('/uzytkownicy/:id/status', authMiddleware, async (req, res) => {
   if (req.user.role !== 'administrator') {

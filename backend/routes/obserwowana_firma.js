@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/db');
 const authMiddleware = require('../middlewares/auth');
 
+// Interfejs Kandydat (zakładka "Przegląd ofert" -> przejście do szczegółów oferty)
 // CREATE - Obserwowanie firmy przez kandydata
 router.post('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {
@@ -30,6 +31,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Kandydat (zakładka "Obserwowane firmy i oferty")
 // READ - Pobieranie obserwowanych firm kandydata
 router.get('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {
@@ -49,6 +51,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Kandydat (zakładka "Obserwowane firmy i oferty")
 // DELETE - Usunięcie obserwowanej firmy
 router.delete('/:Firmaid', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {

@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/db');
 const authMiddleware = require('../middlewares/auth');
 
+// Interfejs PracownikHR (zakładka "Kategorie")
 // CREATE - Dodanie nowej kategorii kandydata
 router.post('/', authMiddleware, async (req, res) => {
   const { nazwa, PracownikHRid } = req.body;
@@ -37,6 +38,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs PracownikHR (zakładka "Kategorie")
 // READ - Pobieranie wszystkich kategorii kandydatów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
   const { sortBy, sortOrder } = req.query;
@@ -83,6 +85,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs PracownikHR (zakładka "Kategorie")
 // READ - Pobieranie kategorii kandydata po ID (zabezpieczone)
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -108,6 +111,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs PracownikHR (zakładka "Kategorie")
 // UPDATE - Aktualizacja kategorii kandydata (zabezpieczone)
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -145,6 +149,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs PracownikHR (zakładka "Kategorie")
 // DELETE - Usunięcie kategorii kandydata (zabezpieczone)
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;

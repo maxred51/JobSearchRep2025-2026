@@ -9,8 +9,23 @@ const authMiddleware = require('../middlewares/auth');
 // CREATE - Rejestracja nowego kandydata
 router.post('/', async (req, res) => {
   const { imie, nazwisko, telefon, email, haslo, plec, cv_path } = req.body;
+  // Walidacja danych
   if (!imie || !nazwisko || !telefon || !email || !haslo || !plec || !['M', 'K'].includes(plec)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (imie.length > 50 || nazwisko.length > 50 || email.length > 50 || telefon.length > 12 || (cv_path && cv_path.length > 255)) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu emaila
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
+  }
+  // Walidacja formatu telefonu
+  const phoneRegex = /^[0-9]{9,12}$/;
+  if (!phoneRegex.test(telefon)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format telefonu' });
   }
   try {
     const [existing] = await pool.query('SELECT * FROM kandydat WHERE email = ? OR telefon = ?', [email, telefon]);
@@ -68,6 +83,9 @@ router.post('/login', async (req, res) => {
 
 // READ - Pobieranie wszystkich kandydatów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator' && req.user.role !== 'pracownikHR') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   try {
     const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path FROM kandydat');
     res.json(rows);
@@ -79,6 +97,9 @@ router.get('/', authMiddleware, async (req, res) => {
 // READ - Pobieranie kandydata po ID (zabezpieczone)
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  if (req.user.role !== 'administrator' && req.user.role !== 'pracownikHR' && (req.user.role !== 'kandydat' || req.user.id !== parseInt(id))) {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   try {
     const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path FROM kandydat WHERE id = ?', [id]);
     if (rows.length === 0) {
@@ -90,6 +111,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Kandydat (zakładka "Moje CV") i Interfejs PracownikHR (zakładka "Kandydaci")
 // READ - Pobieranie CV kandydata (zabezpieczone)
 router.get('/:id/cv', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -101,6 +123,10 @@ router.get('/:id/cv', authMiddleware, async (req, res) => {
     }
     if (!kandydat[0].cv_path) {
       return res.status(404).json({ error: 'CV nie istnieje dla tego kandydata' });
+    }
+    // Weryfikacja uprawnień dla kandydata
+    if (req.user.role === 'kandydat' && req.user.id === parseInt(id)) {
+      return res.json({ cv_path: kandydat[0].cv_path });
     }
     // Weryfikacja uprawnień dla pracownika HR
     if (req.user.role === 'pracownikHR') {
@@ -114,6 +140,7 @@ router.get('/:id/cv', authMiddleware, async (req, res) => {
         return res.status(403).json({ error: 'Brak uprawnień do wyświetlenia CV tego kandydata' });
       }
     }
+    // Administrator ma pełny dostęp
     res.json({ cv_path: kandydat[0].cv_path });
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -124,8 +151,26 @@ router.get('/:id/cv', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { imie, nazwisko, telefon, email, haslo, plec, cv_path } = req.body;
+  if (req.user.role !== 'administrator' && (req.user.role !== 'kandydat' || req.user.id !== parseInt(id))) {
+    return res.status(403).json({ error: 'Brak uprawnień do edycji tego konta' });
+  }
+  // Walidacja danych
   if (!imie || !nazwisko || !telefon || !email || !plec || !['M', 'K'].includes(plec)) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (imie.length > 50 || nazwisko.length > 50 || email.length > 50 || telefon.length > 12 || (cv_path && cv_path.length > 255)) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu emaila
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
+  }
+  // Walidacja formatu telefonu
+  const phoneRegex = /^[0-9]{9,12}$/;
+  if (!phoneRegex.test(telefon)) {
+    return res.status(400).json({ error: 'Nieprawidłowy format telefonu' });
   }
   try {
     const [existing] = await pool.query('SELECT * FROM kandydat WHERE (email = ? OR telefon = ?) AND id != ?', [email, telefon, id]);
@@ -154,6 +199,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // DELETE - Usunięcie kandydata (zabezpieczone)
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  if (req.user.role !== 'administrator' && (req.user.role !== 'kandydat' || req.user.id !== parseInt(id))) {
+    return res.status(403).json({ error: 'Brak uprawnień do usunięcia tego konta' });
+  }
   try {
     const [result] = await pool.query('DELETE FROM kandydat WHERE id = ?', [id]);
     if (result.affectedRows === 0) {

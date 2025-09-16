@@ -57,6 +57,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // POWIADOMIENIA ADMINISTRATORA
 // ========================
 
+// Interfejs Administrator (zakładka "Powiadomienia")
 // Pobranie powiadomień systemowych (typu "system")
 router.get('/admin', authMiddleware, async (req, res) => {
   try {

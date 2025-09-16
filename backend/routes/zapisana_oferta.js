@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/db');
 const authMiddleware = require('../middlewares/auth');
 
+// Interfejs Kandydat (zakładka "Przegląd ofert")
 // CREATE - Zapisanie oferty dla kandydata
 router.post('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {
@@ -30,6 +31,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Kandydat (zakładka "Obserwowane firmy i oferty")
 // READ - Pobieranie zapisanych ofert kandydata
 router.get('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {
@@ -37,7 +39,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
   try {
     const [rows] = await pool.query(
-      'SELECT o.id, o.tytuł, o.opis, o.wymagania, o.lokalizacja, f.nazwa AS nazwa_firmy ' +
+      'SELECT o.id, o.tytul, o.opis, o.wymagania, o.lokalizacja, f.nazwa AS nazwa_firmy ' +
       'FROM zapisana_oferta zo ' +
       'JOIN oferta o ON zo.Ofertaid = o.id ' +
       'JOIN pracownikHR p ON o.PracownikHRid = p.id ' +
@@ -51,6 +53,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Kandydat (zakładka "Obserwowane firmy i oferty")
 // DELETE - Usunięcie zapisanej oferty
 router.delete('/:Ofertaid', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {

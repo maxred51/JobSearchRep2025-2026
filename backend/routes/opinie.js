@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/db');
 const authMiddleware = require('../middlewares/auth');
 
+// Interfejs Kandydat (zakładka "Moje opinie")
 // READ - Pobieranie listy firm z opiniami kandydata
 router.get('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {
@@ -22,6 +23,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Kandydat (zakładka "Moje opinie")
 // UPDATE - Edycja opinii o firmie
 router.put('/:Firmaid', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {

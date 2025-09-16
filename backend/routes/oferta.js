@@ -3,19 +3,35 @@ const router = express.Router();
 const pool = require('../config/db');
 const authMiddleware = require('../middlewares/auth');
 
+// Interfejs PracownikHR (zakładka "Moje oferty")
 // CREATE - Dodanie nowej oferty
 router.post('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'pracownikHR') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   const { tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid } = req.body;
+  // Walidacja danych
   if (!tytuł || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (tytuł.length > 60 || opis.length > 150 || lokalizacja.length > 50) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu pól
+  if (typeof wynagrodzenie !== 'number' || wynagrodzenie <= 0) {
+    return res.status(400).json({ error: 'Wynagrodzenie musi być liczbą dodatnią' });
+  }
+  if (!Number.isInteger(czas) || czas <= 0) {
+    return res.status(400).json({ error: 'Czas musi być liczbą całkowitą dodatnią' });
+  }
+  if (isNaN(parseInt(KategoriaPracyid))) {
+    return res.status(400).json({ error: 'KategoriaPracyid musi być liczbą całkowitą' });
   }
   try {
     // 1. Zapis oferty
     const [result] = await pool.query(
-      'INSERT INTO oferta (tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, CURRENT_DATE)',
+      'INSERT INTO oferta (tytul, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, CURRENT_DATE)',
       [tytuł, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, req.user.id, KategoriaPracyid]
     );
 
@@ -39,6 +55,9 @@ router.post('/', authMiddleware, async (req, res) => {
     );
 
     const io = req.app.get('io');
+    if (!io) {
+      return res.status(500).json({ error: 'Socket.IO niedostępne' });
+    }
 
     // 4. Dodanie powiadomień + wysłanie przez Socket.IO do kandydatów
     for (const kandydat of kandydaci) {
@@ -86,13 +105,30 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Oferty pracy") i Interfejs Kandydat (zakładka "Przegląd ofert")
 // READ - Pobieranie wszystkich ofert (dla administratora i publiczne)
 router.get('/', authMiddleware, async (req, res) => {
   const { kategoriaPracy, poziom, wymiar, tryb, umowa } = req.query;
+  // Walidacja parametrów query
+  if (kategoriaPracy && isNaN(parseInt(kategoriaPracy))) {
+    return res.status(400).json({ error: 'KategoriaPracyid musi być liczbą całkowitą' });
+  }
+  if (poziom && isNaN(parseInt(poziom))) {
+    return res.status(400).json({ error: 'Poziomid musi być liczbą całkowitą' });
+  }
+  if (wymiar && isNaN(parseInt(wymiar))) {
+    return res.status(400).json({ error: 'Wymiarid musi być liczbą całkowitą' });
+  }
+  if (tryb && isNaN(parseInt(tryb))) {
+    return res.status(400).json({ error: 'Trybid musi być liczbą całkowitą' });
+  }
+  if (umowa && isNaN(parseInt(umowa))) {
+    return res.status(400).json({ error: 'Umowaid musi być liczbą całkowitą' });
+  }
   try {
     if (req.user.role === 'administrator') {
       let query = `
-        SELECT o.id, o.tytuł, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
+        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
         FROM oferta o
         JOIN pracownikHR p ON o.PracownikHRid = p.id
         JOIN firma f ON p.Firmaid = f.id
@@ -127,7 +163,7 @@ router.get('/', authMiddleware, async (req, res) => {
       res.json(rows);
     } else {
       let query = `
-        SELECT o.id, o.tytuł, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
+        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
         FROM oferta o
         JOIN pracownikHR p ON o.PracownikHRid = p.id
         JOIN firma f ON p.Firmaid = f.id
@@ -167,6 +203,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Oferty pracy") i Interfejs Kandydat (zakładka "Przegląd ofert")
 // READ - Pobieranie oferty po ID (dla administratora i publiczne)
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -204,12 +241,13 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs PracownikHR (zakładka "Moje oferty")
 // READ - Pobieranie ofert pracownika HR (zabezpieczone)
 router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
   const { PracownikHRid } = req.params;
   try {
     // Sprawdzenie uprawnień
-    if (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid)) {
+    if (req.user.role !== 'administrator' && (req.user.role === 'pracownikHR' && req.user.id !== parseInt(PracownikHRid))) {
       return res.status(403).json({ error: 'Brak uprawnień do wyświetlania ofert' });
     }
     const [rows] = await pool.query(
@@ -227,12 +265,28 @@ router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Oferty pracy") i Interfejs PracownikHR (zakładka "Moje oferty")
 // UPDATE - Aktualizacja oferty
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid, aktywna } = req.body;
+  // Walidacja danych
   if (!tytuł || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid || aktywna === undefined) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
+  }
+  // Walidacja długości pól
+  if (tytuł.length > 60 || opis.length > 150 || lokalizacja.length > 50) {
+    return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
+  }
+  // Walidacja formatu pól
+  if (typeof wynagrodzenie !== 'number' || wynagrodzenie <= 0) {
+    return res.status(400).json({ error: 'Wynagrodzenie musi być liczbą dodatnią' });
+  }
+  if (!Number.isInteger(czas) || czas <= 0) {
+    return res.status(400).json({ error: 'Czas musi być liczbą całkowitą dodatnią' });
+  }
+  if (isNaN(parseInt(KategoriaPracyid))) {
+    return res.status(400).json({ error: 'KategoriaPracyid musi być liczbą całkowitą' });
   }
   try {
     // Weryfikacja, czy oferta należy do pracownika HR lub użytkownik jest administratorem
@@ -247,7 +301,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Brak uprawnień' });
     }
     const [result] = await pool.query(
-      'UPDATE oferta SET tytuł = ?, opis = ?, wynagrodzenie = ?, wymagania = ?, lokalizacja = ?, czas = ?, KategoriaPracyid = ?, aktywna = ? WHERE id = ?',
+      'UPDATE oferta SET tytul = ?, opis = ?, wynagrodzenie = ?, wymagania = ?, lokalizacja = ?, czas = ?, KategoriaPracyid = ?, aktywna = ? WHERE id = ?',
       [tytuł, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, KategoriaPracyid, aktywna, id]
     );
     if (result.affectedRows === 0) {
@@ -262,6 +316,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Interfejs Administrator (zakładka "Oferty pracy") i Interfejs PracownikHR (zakładka "Moje oferty")
 // DELETE - Usunięcie oferty
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -276,12 +331,20 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
       return res.status(403).json({ error: 'Brak uprawnień' });
     }
+    // Sprawdzenie, czy istnieją aplikacje dla oferty
+    const [[aplikacje]] = await pool.query('SELECT COUNT(*) AS count FROM aplikacja WHERE Ofertaid = ?', [id]);
+    if (aplikacje.count > 0) {
+      return res.status(400).json({ error: 'Nie można usunąć oferty z istniejącymi aplikacjami' });
+    }
     const [result] = await pool.query('DELETE FROM oferta WHERE id = ?', [id]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Oferta nie znaleziona' });
     }
     res.json({ message: 'Oferta usunięta' });
   } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).json({ error: 'Nie można usunąć oferty z istniejącymi aplikacjami' });
+    }
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
