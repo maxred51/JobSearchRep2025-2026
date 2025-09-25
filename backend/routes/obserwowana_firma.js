@@ -10,14 +10,16 @@ router.post('/', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   const { Firmaid } = req.body;
+
+  // Walidacja danych
   if (!Firmaid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane: wymagane Firmaid' });
   }
+  if (isNaN(parseInt(Firmaid))) {
+    return res.status(400).json({ error: 'Firmaid musi być liczbą całkowitą' });
+  }
+
   try {
-    const [firma] = await pool.query('SELECT id FROM firma WHERE id = ?', [Firmaid]);
-    if (firma.length === 0) {
-      return res.status(404).json({ error: 'Firma nie znaleziona' });
-    }
     const [result] = await pool.query(
       'INSERT INTO obserwowana_firma (Kandydatid, Firmaid) VALUES (?, ?)',
       [req.user.id, Firmaid]
@@ -26,6 +28,9 @@ router.post('/', authMiddleware, async (req, res) => {
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Firma już obserwowana' });
+    }
+    if (error.code === 'ER_NO_REFERENCED_ROW' || error.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(404).json({ error: 'Firma nie znaleziona' });
     }
     res.status(500).json({ error: 'Błąd serwera' });
   }
@@ -58,13 +63,25 @@ router.delete('/:Firmaid', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   const { Firmaid } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(Firmaid))) {
+    return res.status(400).json({ error: 'Firmaid musi być liczbą całkowitą' });
+  }
+
   try {
+    // Sprawdzenie, czy firma istnieje
+    const [firma] = await pool.query('SELECT id FROM firma WHERE id = ?', [Firmaid]);
+    if (firma.length === 0) {
+      return res.status(404).json({ error: 'Firma nie znaleziona' });
+    }
+    // Usunięcie powiązania
     const [result] = await pool.query(
       'DELETE FROM obserwowana_firma WHERE Kandydatid = ? AND Firmaid = ?',
       [req.user.id, Firmaid]
     );
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Obserwowana firma nie znaleziona' });
+      return res.status(404).json({ error: 'Firma nie była obserwowana' });
     }
     res.json({ message: 'Obserwowana firma usunięta' });
   } catch (error) {

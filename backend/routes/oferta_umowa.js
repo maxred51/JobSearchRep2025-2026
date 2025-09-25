@@ -1,13 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Dodanie nowego powiązania oferta-umowa
-router.post('/', async (req, res) => {
-  const { Ofertaid, Umowaid } = req.body;
-  if (!Ofertaid || !Umowaid) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+router.post('/', authMiddleware, async (req, res) => {
+  // Sprawdzenie roli (pracownikhr lub administrator)
+  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
   }
+
+  const { Ofertaid, Umowaid } = req.body;
+
+  // Walidacja Ofertaid i Umowaid
+  if (isNaN(parseInt(Ofertaid)) || isNaN(parseInt(Umowaid))) {
+    return res.status(400).json({ error: 'Ofertaid i Umowaid muszą być liczbami całkowitymi' });
+  }
+
   try {
     const [result] = await pool.query(
       'INSERT INTO oferta_umowa (Ofertaid, Umowaid) VALUES (?, ?)',
@@ -26,7 +35,7 @@ router.post('/', async (req, res) => {
 });
 
 // READ - Pobieranie wszystkich powiązań oferta-umowa
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM oferta_umowa');
     res.json(rows);
@@ -36,8 +45,14 @@ router.get('/', async (req, res) => {
 });
 
 // READ - Pobieranie powiązania oferta-umowa po Ofertaid i Umowaid
-router.get('/:Ofertaid/:Umowaid', async (req, res) => {
+router.get('/:Ofertaid/:Umowaid', authMiddleware, async (req, res) => {
   const { Ofertaid, Umowaid } = req.params;
+
+  // Walidacja Ofertaid i Umowaid
+  if (isNaN(parseInt(Ofertaid)) || isNaN(parseInt(Umowaid))) {
+    return res.status(400).json({ error: 'Ofertaid i Umowaid muszą być liczbami całkowitymi' });
+  }
+
   try {
     const [rows] = await pool.query(
       'SELECT * FROM oferta_umowa WHERE Ofertaid = ? AND Umowaid = ?',
@@ -53,8 +68,19 @@ router.get('/:Ofertaid/:Umowaid', async (req, res) => {
 });
 
 // DELETE - Usunięcie powiązania oferta-umowa
-router.delete('/:Ofertaid/:Umowaid', async (req, res) => {
+router.delete('/:Ofertaid/:Umowaid', authMiddleware, async (req, res) => {
+  // Sprawdzenie roli (pracownikhr lub administrator)
+  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+
   const { Ofertaid, Umowaid } = req.params;
+
+  // Walidacja Ofertaid i Umowaid
+  if (isNaN(parseInt(Ofertaid)) || isNaN(parseInt(Umowaid))) {
+    return res.status(400).json({ error: 'Ofertaid i Umowaid muszą być liczbami całkowitymi' });
+  }
+
   try {
     const [result] = await pool.query(
       'DELETE FROM oferta_umowa WHERE Ofertaid = ? AND Umowaid = ?',

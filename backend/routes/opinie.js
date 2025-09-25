@@ -31,17 +31,25 @@ router.put('/:Firmaid', authMiddleware, async (req, res) => {
   }
   const { Firmaid } = req.params;
   const { tresc } = req.body;
+
+  // Walidacja danych
   if (tresc === undefined || tresc === null) {
     return res.status(400).json({ error: 'Nieprawidłowe dane: wymagane tresc' });
   }
+  if (isNaN(parseInt(Firmaid))) {
+    return res.status(400).json({ error: 'Firmaid musi być liczbą całkowitą' });
+  }
+  if (typeof tresc === 'string' && tresc.length > 80) {
+    return res.status(400).json({ error: 'Treść opinii nie może przekraczać 80 znaków' });
+  }
+
   try {
-    const [opinia] = await pool.query(
-      'SELECT * FROM opinia WHERE Kandydatid = ? AND Firmaid = ?',
-      [req.user.id, Firmaid]
-    );
-    if (opinia.length === 0) {
-      return res.status(404).json({ error: 'Opinia nie znaleziona' });
+    // Sprawdzenie, czy firma istnieje
+    const [firma] = await pool.query('SELECT id FROM firma WHERE id = ?', [Firmaid]);
+    if (firma.length === 0) {
+      return res.status(404).json({ error: 'Firma nie znaleziona' });
     }
+    // Aktualizacja opinii
     const [result] = await pool.query(
       'UPDATE opinia SET tresc = ? WHERE Kandydatid = ? AND Firmaid = ?',
       [tresc, req.user.id, Firmaid]

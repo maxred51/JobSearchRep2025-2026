@@ -7,17 +7,26 @@ const authMiddleware = require('../middlewares/auth');
 // CREATE - Dodanie nowej kategorii kandydata
 router.post('/', authMiddleware, async (req, res) => {
   const { nazwa, PracownikHRid } = req.body;
+  
+  // Walidacja danych
   if (!nazwa || !PracownikHRid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
+  if (typeof nazwa !== 'string' || nazwa.trim() === '' || nazwa.length > 60) {
+    return res.status(400).json({ error: 'Nazwa musi być niepustym ciągiem znaków o długości do 60 znaków' });
+  }
+  if (isNaN(parseInt(PracownikHRid))) {
+    return res.status(400).json({ error: 'PracownikHRid musi być liczbą całkowitą' });
+  }
+
   try {
     // Sprawdzenie, czy PracownikHRid istnieje
     const [pracownikHR] = await pool.query('SELECT id FROM pracownikHR WHERE id = ?', [PracownikHRid]);
     if (pracownikHR.length === 0) {
       return res.status(400).json({ error: 'Podany pracownik HR nie istnieje' });
     }
-    // Sprawdzenie, czy użytkownik ma uprawnienia (musi być pracownikiem HR o podanym ID)
-    if (req.user.role !== 'pracownikHR' || req.user.id !== PracownikHRid) {
+    // Sprawdzenie uprawnień
+    if (req.user.role !== 'administrator' && (req.user.role !== 'pracownikHR' || req.user.id !== PracownikHRid)) {
       return res.status(403).json({ error: 'Brak uprawnień do tworzenia kategorii' });
     }
     // Sprawdzenie unikalności nazwy w obrębie PracownikHRid
@@ -28,6 +37,7 @@ router.post('/', authMiddleware, async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Nazwa kategorii musi być unikalna dla danego pracownika HR' });
     }
+    // Wstawienie kategorii
     const [result] = await pool.query(
       'INSERT INTO kategoriakandydata (nazwa, PracownikHRid) VALUES (?, ?)',
       [nazwa, PracownikHRid]
@@ -42,6 +52,15 @@ router.post('/', authMiddleware, async (req, res) => {
 // READ - Pobieranie wszystkich kategorii kandydatów (zabezpieczone)
 router.get('/', authMiddleware, async (req, res) => {
   const { sortBy, sortOrder } = req.query;
+
+  // Walidacja parametrów sortowania
+  if (sortBy && sortBy !== 'nazwa') {
+    return res.status(400).json({ error: 'Sortowanie możliwe tylko po polu "nazwa"' });
+  }
+  if (sortOrder && !['asc', 'desc'].includes(sortOrder.toLowerCase())) {
+    return res.status(400).json({ error: 'SortOrder musi być "asc" lub "desc"' });
+  }
+
   try {
     if (req.user.role === 'pracownikHR') {
       let query = `
@@ -89,6 +108,12 @@ router.get('/', authMiddleware, async (req, res) => {
 // READ - Pobieranie kategorii kandydata po ID (zabezpieczone)
 router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+
+  // Walidacja id
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID kategorii musi być liczbą całkowitą' });
+  }
+
   try {
     const [rows] = await pool.query(
       'SELECT k.id, k.nazwa, k.PracownikHRid, COUNT(kk.Kandydatid) AS liczba_kandydatow ' +
@@ -101,8 +126,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Kategoria nie znaleziona' });
     }
-    // Sprawdzenie uprawnień: pracownik HR może zobaczyć tylko własne kategorie
-    if (req.user.role === 'pracownikHR' && rows[0].PracownikHRid !== req.user.id) {
+    // Sprawdzenie uprawnień
+    if (req.user.role !== 'administrator' && req.user.role === 'pracownikHR' && rows[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do tej kategorii' });
     }
     res.json(rows[0]);
@@ -116,16 +141,26 @@ router.get('/:id', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { nazwa } = req.body;
+
+  // Walidacja danych
   if (!nazwa) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID kategorii musi być liczbą całkowitą' });
+  }
+  if (typeof nazwa !== 'string' || nazwa.trim() === '' || nazwa.length > 60) {
+    return res.status(400).json({ error: 'Nazwa musi być niepustym ciągiem znaków o długości do 60 znaków' });
+  }
+
   try {
-    // Sprawdzenie, czy kategoria istnieje i należy do zalogowanego pracownika HR
+    // Sprawdzenie, czy kategoria istnieje
     const [kategoria] = await pool.query('SELECT * FROM kategoriakandydata WHERE id = ?', [id]);
     if (kategoria.length === 0) {
       return res.status(404).json({ error: 'Kategoria nie znaleziona' });
     }
-    if (req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
+    // Sprawdzenie uprawnień
+    if (req.user.role !== 'administrator' && req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do edycji tej kategorii' });
     }
     // Sprawdzenie unikalności nazwy w obrębie PracownikHRid
@@ -136,6 +171,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Nazwa kategorii musi być unikalna dla danego pracownika HR' });
     }
+    // Aktualizacja kategorii
     const [result] = await pool.query(
       'UPDATE kategoriakandydata SET nazwa = ? WHERE id = ?',
       [nazwa, id]
@@ -153,15 +189,23 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // DELETE - Usunięcie kategorii kandydata (zabezpieczone)
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+
+  // Walidacja id
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID kategorii musi być liczbą całkowitą' });
+  }
+
   try {
-    // Sprawdzenie, czy kategoria istnieje i należy do zalogowanego pracownika HR
+    // Sprawdzenie, czy kategoria istnieje
     const [kategoria] = await pool.query('SELECT * FROM kategoriakandydata WHERE id = ?', [id]);
     if (kategoria.length === 0) {
       return res.status(404).json({ error: 'Kategoria nie znaleziona' });
     }
-    if (req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
+    // Sprawdzenie uprawnień
+    if (req.user.role !== 'administrator' && req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do usunięcia tej kategorii' });
     }
+    // Usunięcie kategorii
     const [result] = await pool.query('DELETE FROM kategoriakandydata WHERE id = ?', [id]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Kategoria nie znaleziona' });

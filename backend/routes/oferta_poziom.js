@@ -1,13 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Dodanie nowego powiązania oferta-poziom
-router.post('/', async (req, res) => {
-  const { Ofertaid, Poziomid } = req.body;
-  if (!Ofertaid || !Poziomid) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+router.post('/', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
   }
+  const { Ofertaid, Poziomid } = req.body;
+
+  // Walidacja danych
+  if (isNaN(parseInt(Ofertaid)) || isNaN(parseInt(Poziomid))) {
+    return res.status(400).json({ error: 'Ofertaid i Poziomid muszą być liczbami całkowitymi' });
+  }
+
   try {
     const [result] = await pool.query(
       'INSERT INTO oferta_poziom (Ofertaid, Poziomid) VALUES (?, ?)',
@@ -26,7 +33,7 @@ router.post('/', async (req, res) => {
 });
 
 // READ - Pobieranie wszystkich powiązań oferta-poziom
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM oferta_poziom');
     res.json(rows);
@@ -36,8 +43,14 @@ router.get('/', async (req, res) => {
 });
 
 // READ - Pobieranie powiązania oferta-poziom po Ofertaid i Poziomid
-router.get('/:Ofertaid/:Poziomid', async (req, res) => {
+router.get('/:Ofertaid/:Poziomid', authMiddleware, async (req, res) => {
   const { Ofertaid, Poziomid } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(Ofertaid)) || isNaN(parseInt(Poziomid))) {
+    return res.status(400).json({ error: 'Ofertaid i Poziomid muszą być liczbami całkowitymi' });
+  }
+
   try {
     const [rows] = await pool.query(
       'SELECT * FROM oferta_poziom WHERE Ofertaid = ? AND Poziomid = ?',
@@ -53,8 +66,17 @@ router.get('/:Ofertaid/:Poziomid', async (req, res) => {
 });
 
 // DELETE - Usunięcie powiązania oferta-poziom
-router.delete('/:Ofertaid/:Poziomid', async (req, res) => {
+router.delete('/:Ofertaid/:Poziomid', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   const { Ofertaid, Poziomid } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(Ofertaid)) || isNaN(parseInt(Poziomid))) {
+    return res.status(400).json({ error: 'Ofertaid i Poziomid muszą być liczbami całkowitymi' });
+  }
+
   try {
     const [result] = await pool.query(
       'DELETE FROM oferta_poziom WHERE Ofertaid = ? AND Poziomid = ?',

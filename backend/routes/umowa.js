@@ -1,19 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Dodanie nowego typu umowy
-router.post('/', async (req, res) => {
-  const { nazwa } = req.body;
-  if (!nazwa) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+router.post('/', authMiddleware, async (req, res) => {
+  // Sprawdzenie roli (tylko administrator)
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
   }
+
+  const { nazwa } = req.body;
+
+  // Walidacja nazwy
+  if (!nazwa || typeof nazwa !== 'string' || nazwa.trim().length === 0 || nazwa.length > 50) {
+    return res.status(400).json({ error: 'Nazwa musi być niepustym ciągiem znaków o długości do 50 znaków' });
+  }
+
   try {
     const [result] = await pool.query(
       'INSERT INTO umowa (nazwa) VALUES (?)',
-      [nazwa]
+      [nazwa.trim()]
     );
-    res.status(201).json({ id: result.insertId, nazwa });
+    res.status(201).json({ id: result.insertId, nazwa: nazwa.trim() });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Nazwa umowy musi być unikalna' });
@@ -23,7 +32,7 @@ router.post('/', async (req, res) => {
 });
 
 // READ - Pobieranie wszystkich typów umów
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM umowa');
     res.json(rows);
@@ -33,8 +42,14 @@ router.get('/', async (req, res) => {
 });
 
 // READ - Pobieranie typu umowy po ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+
+  // Walidacja id
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID musi być liczbą całkowitą' });
+  }
+
   try {
     const [rows] = await pool.query('SELECT * FROM umowa WHERE id = ?', [id]);
     if (rows.length === 0) {
@@ -47,21 +62,34 @@ router.get('/:id', async (req, res) => {
 });
 
 // UPDATE - Aktualizacja typu umowy
-router.put('/:id', async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
+  // Sprawdzenie roli (tylko administrator)
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+
   const { id } = req.params;
   const { nazwa } = req.body;
-  if (!nazwa) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+
+  // Walidacja id
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID musi być liczbą całkowitą' });
   }
+
+  // Walidacja nazwy
+  if (!nazwa || typeof nazwa !== 'string' || nazwa.trim().length === 0 || nazwa.length > 50) {
+    return res.status(400).json({ error: 'Nazwa musi być niepustym ciągiem znaków o długości do 50 znaków' });
+  }
+
   try {
     const [result] = await pool.query(
       'UPDATE umowa SET nazwa = ? WHERE id = ?',
-      [nazwa, id]
+      [nazwa.trim(), id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Typ umowy nie znaleziony' });
     }
-    res.json({ id, nazwa });
+    res.json({ id, nazwa: nazwa.trim() });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Nazwa umowy musi być unikalna' });
@@ -71,8 +99,19 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE - Usunięcie typu umowy
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
+  // Sprawdzenie roli (tylko administrator)
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+
   const { id } = req.params;
+
+  // Walidacja id
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID musi być liczbą całkowitą' });
+  }
+
   try {
     const [result] = await pool.query('DELETE FROM umowa WHERE id = ?', [id]);
     if (result.affectedRows === 0) {
@@ -80,6 +119,9 @@ router.delete('/:id', async (req, res) => {
     }
     res.json({ message: 'Typ umowy usunięty' });
   } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).json({ error: 'Nie można usunąć typu umowy, ponieważ jest powiązany z ofertami' });
+    }
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });

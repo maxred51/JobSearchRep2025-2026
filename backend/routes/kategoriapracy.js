@@ -1,19 +1,37 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Dodanie nowej kategorii pracy
-router.post('/', async (req, res) => {
-  const { Nazwa, KategoriaPracyid } = req.body;
-  if (!Nazwa) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+router.post('/', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
   }
+  const { Nazwa, KategoriaPracyid } = req.body;
+
+  // Walidacja danych
+  if (typeof Nazwa !== 'string' || Nazwa.trim().length === 0 || Nazwa.length > 60) {
+    return res.status(400).json({ error: 'Nazwa musi być niepustym ciągiem znaków o długości do 60 znaków' });
+  }
+  if (KategoriaPracyid !== undefined && KategoriaPracyid !== null && isNaN(parseInt(KategoriaPracyid))) {
+    return res.status(400).json({ error: 'KategoriaPracyid musi być liczbą całkowitą' });
+  }
+
   try {
     const [result] = await pool.query(
       'INSERT INTO kategoriapracy (Nazwa, KategoriaPracyid) VALUES (?, ?)',
-      [Nazwa, KategoriaPracyid || null]
+      [Nazwa.trim(), KategoriaPracyid || null]
     );
-    res.status(201).json({ id: result.insertId, Nazwa, KategoriaPracyid });
+
+    // Sprawdzenie cykli w hierarchii
+    if (KategoriaPracyid && parseInt(KategoriaPracyid) === result.insertId) {
+      // Cofnięcie wstawienia w przypadku cyklu
+      await pool.query('DELETE FROM kategoriapracy WHERE id = ?', [result.insertId]);
+      return res.status(400).json({ error: 'Kategoria nadrzędna nie może być taka sama jak tworzona kategoria' });
+    }
+
+    res.status(201).json({ id: result.insertId, Nazwa: Nazwa.trim(), KategoriaPracyid });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Nazwa kategorii musi być unikalna' });
@@ -26,7 +44,7 @@ router.post('/', async (req, res) => {
 });
 
 // READ - Pobieranie wszystkich kategorii pracy
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM kategoriapracy');
     res.json(rows);
@@ -36,8 +54,14 @@ router.get('/', async (req, res) => {
 });
 
 // READ - Pobieranie kategorii pracy po ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID musi być liczbą całkowitą' });
+  }
+
   try {
     const [rows] = await pool.query('SELECT * FROM kategoriapracy WHERE id = ?', [id]);
     if (rows.length === 0) {
@@ -50,21 +74,33 @@ router.get('/:id', async (req, res) => {
 });
 
 // UPDATE - Aktualizacja kategorii pracy
-router.put('/:id', async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   const { id } = req.params;
   const { Nazwa, KategoriaPracyid } = req.body;
-  if (!Nazwa) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+
+  // Walidacja danych
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID musi być liczbą całkowitą' });
   }
+  if (typeof Nazwa !== 'string' || Nazwa.trim().length === 0 || Nazwa.length > 60) {
+    return res.status(400).json({ error: 'Nazwa musi być niepustym ciągiem znaków o długości do 60 znaków' });
+  }
+  if (KategoriaPracyid !== undefined && KategoriaPracyid !== null && isNaN(parseInt(KategoriaPracyid))) {
+    return res.status(400).json({ error: 'KategoriaPracyid musi być liczbą całkowitą' });
+  }
+
   try {
     const [result] = await pool.query(
       'UPDATE kategoriapracy SET Nazwa = ?, KategoriaPracyid = ? WHERE id = ?',
-      [Nazwa, KategoriaPracyid || null, id]
+      [Nazwa.trim(), KategoriaPracyid || null, id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Kategoria pracy nie znaleziona' });
     }
-    res.json({ id, Nazwa, KategoriaPracyid });
+    res.json({ id, Nazwa: Nazwa.trim(), KategoriaPracyid });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Nazwa kategorii musi być unikalna' });
@@ -77,8 +113,17 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE - Usunięcie kategorii pracy
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'administrator') {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
   const { id } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'ID musi być liczbą całkowitą' });
+  }
+
   try {
     const [result] = await pool.query('DELETE FROM kategoriapracy WHERE id = ?', [id]);
     if (result.affectedRows === 0) {
@@ -86,6 +131,9 @@ router.delete('/:id', async (req, res) => {
     }
     res.json({ message: 'Kategoria pracy usunięta' });
   } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).json({ error: 'Nie można usunąć kategorii, ponieważ jest powiązana z ofertami lub podkategoriami' });
+    }
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });

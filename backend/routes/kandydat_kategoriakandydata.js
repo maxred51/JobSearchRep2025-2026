@@ -6,9 +6,18 @@ const authMiddleware = require('../middlewares/auth');
 // CREATE - Dodanie nowego powiązania kandydat-kategoria
 router.post('/', authMiddleware, async (req, res) => {
   const { Kandydatid, KategoriaKandydataid } = req.body;
+
+  // Walidacja danych
   if (!Kandydatid || !KategoriaKandydataid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
+  if (isNaN(parseInt(Kandydatid))) {
+    return res.status(400).json({ error: 'Kandydatid musi być liczbą całkowitą' });
+  }
+  if (isNaN(parseInt(KategoriaKandydataid))) {
+    return res.status(400).json({ error: 'KategoriaKandydataid musi być liczbą całkowitą' });
+  }
+
   try {
     // Sprawdzenie, czy kandydat istnieje
     const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
@@ -73,7 +82,22 @@ router.get('/', authMiddleware, async (req, res) => {
 // READ - Pobieranie powiązania kandydat-kategoria po Kandydatid i KategoriaKandydataid (zabezpieczone)
 router.get('/:Kandydatid/:KategoriaKandydataid', authMiddleware, async (req, res) => {
   const { Kandydatid, KategoriaKandydataid } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(Kandydatid))) {
+    return res.status(400).json({ error: 'Kandydatid musi być liczbą całkowitą' });
+  }
+  if (isNaN(parseInt(KategoriaKandydataid))) {
+    return res.status(400).json({ error: 'KategoriaKandydataid musi być liczbą całkowitą' });
+  }
+
   try {
+    // Sprawdzenie, czy kandydat istnieje
+    const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
+    if (kandydat.length === 0) {
+      return res.status(400).json({ error: 'Podany kandydat nie istnieje' });
+    }
+    // Sprawdzenie powiązania
     const [rows] = await pool.query(
       'SELECT * FROM kandydat_kategoriakandydata WHERE Kandydatid = ? AND KategoriaKandydataid = ?',
       [Kandydatid, KategoriaKandydataid]
@@ -83,7 +107,10 @@ router.get('/:Kandydatid/:KategoriaKandydataid', authMiddleware, async (req, res
     }
     // Sprawdzenie uprawnień
     const [kategoria] = await pool.query('SELECT PracownikHRid FROM kategoriakandydata WHERE id = ?', [KategoriaKandydataid]);
-    if (req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
+    if (kategoria.length === 0) {
+      return res.status(400).json({ error: 'Podana kategoria nie istnieje' });
+    }
+    if (req.user.role !== 'administrator' && req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do tego powiązania' });
     }
     res.json(rows[0]);
@@ -96,9 +123,18 @@ router.get('/:Kandydatid/:KategoriaKandydataid', authMiddleware, async (req, res
 router.put('/:Kandydatid', authMiddleware, async (req, res) => {
   const { Kandydatid } = req.params;
   const { KategoriaKandydataid } = req.body;
+
+  // Walidacja danych
   if (!KategoriaKandydataid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
+  if (isNaN(parseInt(Kandydatid))) {
+    return res.status(400).json({ error: 'Kandydatid musi być liczbą całkowitą' });
+  }
+  if (isNaN(parseInt(KategoriaKandydataid))) {
+    return res.status(400).json({ error: 'KategoriaKandydataid musi być liczbą całkowitą' });
+  }
+
   try {
     // Sprawdzenie, czy kandydat istnieje
     const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
@@ -142,15 +178,30 @@ router.put('/:Kandydatid', authMiddleware, async (req, res) => {
 // DELETE - Usunięcie powiązania kandydat-kategoria (zabezpieczone)
 router.delete('/:Kandydatid/:KategoriaKandydataid', authMiddleware, async (req, res) => {
   const { Kandydatid, KategoriaKandydataid } = req.params;
+
+  // Walidacja parametrów
+  if (isNaN(parseInt(Kandydatid))) {
+    return res.status(400).json({ error: 'Kandydatid musi być liczbą całkowitą' });
+  }
+  if (isNaN(parseInt(KategoriaKandydataid))) {
+    return res.status(400).json({ error: 'KategoriaKandydataid musi być liczbą całkowitą' });
+  }
+
   try {
+    // Sprawdzenie, czy kandydat istnieje
+    const [kandydat] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [Kandydatid]);
+    if (kandydat.length === 0) {
+      return res.status(400).json({ error: 'Podany kandydat nie istnieje' });
+    }
     // Sprawdzenie uprawnień
     const [kategoria] = await pool.query('SELECT PracownikHRid FROM kategoriakandydata WHERE id = ?', [KategoriaKandydataid]);
     if (kategoria.length === 0) {
       return res.status(404).json({ error: 'Kategoria nie znaleziona' });
     }
-    if (req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
+    if (req.user.role !== 'administrator' && req.user.role === 'pracownikHR' && kategoria[0].PracownikHRid !== req.user.id) {
       return res.status(403).json({ error: 'Brak uprawnień do usunięcia tego powiązania' });
     }
+    // Usunięcie powiązania
     const [result] = await pool.query(
       'DELETE FROM kandydat_kategoriakandydata WHERE Kandydatid = ? AND KategoriaKandydataid = ?',
       [Kandydatid, KategoriaKandydataid]
