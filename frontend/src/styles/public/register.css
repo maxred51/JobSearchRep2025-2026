@@ -1,0 +1,88 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #fff;
+}
+
+.register-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.register-wrapper h2 {
+  margin-bottom: 30px;
+  color: #1a237e;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.register-form .row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.register-form input[type="text"],
+.register-form input[type="email"],
+.register-form input[type="password"] {
+  width: 250px;
+  padding: 10px;
+  border: 1px solid #333;
+  border-radius: 2px;
+}
+
+.row input {
+  width: 120px;
+}
+
+.radio-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.radio-group input[type="radio"] {
+  margin: 0; 
+}
+
+
+.register-link {
+  text-align: center;
+  color: blue;
+  font-weight: bold;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+.login-text {
+  font-size: 14px;
+  color: #333;
+}
+
+.login-link {
+  color: blue;
+  text-decoration: underline;
+}

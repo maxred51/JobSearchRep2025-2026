@@ -1,0 +1,81 @@
+.user-management-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.user-management-layout {
+  display: flex;
+  flex: 1;
+  background-color: #f9fafb;
+}
+
+.sidebar {
+  width: 250px;
+  color: #fff;
+}
+
+.user-main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.user-section h2 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: #007bff;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.user-card {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.user-info-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+
+.user-info p {
+  margin: 0.5rem 0;
+}
+
+.user-actions .btn {
+  display: block;
+  margin: 0.5rem 0;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+}
+
+.btn.block { background-color: #d9534f; }
+.btn.unblock { background-color: #5cb85c; }
+.btn.reset { background-color: #0275d8; }
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.user-stats .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+}

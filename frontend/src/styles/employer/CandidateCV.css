@@ -1,0 +1,97 @@
+.candidate-cv-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.candidate-cv-content {
+  display: flex;
+  flex: 1;
+}
+
+.candidate-cv-main {
+  flex: 1;
+  padding: 20px;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+}
+
+.cv-section {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  margin-bottom: 20px;
+  padding: 8px 14px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.back-btn:hover {
+  background-color: #0056b3;
+}
+
+.cv-card {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cv-header {
+  display: flex;
+  gap: 25px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 20px;
+}
+
+.cv-photo {
+  width: 120px;
+  height: 120px;
+  background: #ddd;
+  border-radius: 50%;
+}
+
+.cv-info h2 {
+  margin: 0;
+  color: #007bff;
+}
+
+.cv-info h3 {
+  margin: 5px 0 10px 0;
+  font-size: 20px;
+}
+
+.cv-block {
+  margin-bottom: 25px;
+}
+
+.cv-block h4 {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 18px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 5px;
+}
+
+.cv-block ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cv-block li {
+  padding: 6px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.cv-block li:last-child {
+  border-bottom: none;
+}

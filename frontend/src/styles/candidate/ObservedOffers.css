@@ -1,0 +1,85 @@
+
+.dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  font-family: "Inter", sans-serif;
+}
+
+.dashboard-content {
+  display: flex;
+  flex: 1;
+}
+
+.offers-section {
+  flex: 1;
+  padding: 40px;
+  background-color: #fff;
+}
+
+.offers-section h3 {
+  font-size: 1.6rem;
+  margin-bottom: 25px;
+  color: #222;
+}
+
+.observed-companies,
+.saved-offers {
+  margin-bottom: 40px;
+}
+
+.company,
+.offer {
+  background-color: #f2f4f7;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.company:hover,
+.offer:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+
+.company-header,
+.offer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.company-header strong,
+.offer-header strong {
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.unfollow,
+.cancel {
+  background-color: #e74c3c;
+  border: none;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.unfollow:hover,
+.cancel:hover {
+  background-color: #c0392b;
+}
+
+.company p,
+.offer p {
+  margin: 6px 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+

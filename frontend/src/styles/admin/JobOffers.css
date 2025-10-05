@@ -1,0 +1,86 @@
+.joboffers-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.joboffers-layout {
+  display: flex;
+  flex: 1;
+  background-color: #f9fafb;
+}
+
+.sidebar {
+  width: 250px;
+
+  color: white;
+}
+
+.joboffers-main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.offers-section h2 {
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.offers-toolbar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-input,
+.filter-select {
+  padding: 0.7rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.search-input {
+  flex: 1;
+}
+
+.offers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.offers-table th,
+.offers-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.offers-table th {
+  background-color: #f3f4f6;
+  color: #333;
+}
+
+.offers-table tr:last-child td {
+  border-bottom: none;
+}
+
+.btn-manage {
+  background-color: #0275d8;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.btn-manage:hover {
+  opacity: 0.9;
+}
