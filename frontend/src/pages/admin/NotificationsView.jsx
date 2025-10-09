@@ -1,17 +1,34 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "../../styles/admin/NotificationsView.css";
 import AdminHeader from "../../components/AdminHeader";
 import AdminSidebar from "../../components/AdminSidebar";
 
 const NotificationsView = () => {
-  const notifications = [
-    { text: "Prośba o zresetowanie hasła", date: "Dzisiaj" },
-    { text: "Nowa aplikacja na ofertę: Kierowcę ciężarówki", date: "Wczoraj" },
-    { text: "Loremipsumloremipsum", date: "2025-04-05" },
-    { text: "Loremipsumloremipsum", date: "2025-04-05" },
-    { text: "Loremipsumloremipsum", date: "2025-03-19" },
-    { text: "Loremipsumloremipsum", date: "2025-03-18" },
-  ];
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await axios.get("http://localhost:5000/api/powiadomienie/admin", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setNotifications(response.data);
+      } catch (err) {
+        console.error("Błąd podczas pobierania powiadomień:", err);
+        setError("Nie udało się pobrać powiadomień.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
 
   return (
     <div className="notifications-layout">
@@ -23,22 +40,35 @@ const NotificationsView = () => {
         <main className="notifications-main">
           <section className="notifications-section">
             <h2>Powiadomienia</h2>
-            <table className="notifications-table">
-              <thead>
-                <tr>
-                  <th>Treść</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {notifications.map((n, index) => (
-                  <tr key={index}>
-                    <td>{n.text}</td>
-                    <td>{n.date}</td>
+
+            {loading ? (
+              <p>Ładowanie powiadomień...</p>
+            ) : error ? (
+              <p className="error">{error}</p>
+            ) : notifications.length === 0 ? (
+              <p>Brak powiadomień.</p>
+            ) : (
+              <table className="notifications-table">
+                <thead>
+                  <tr>
+                    <th>Treść</th>
+                    <th>Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {notifications.map((n, index) => (
+                    <tr key={index}>
+                      <td>{n.text || n.message}</td>
+                      <td>
+                        {n.date
+                          ? new Date(n.date).toLocaleDateString("pl-PL")
+                          : "Brak daty"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </section>
         </main>
       </div>

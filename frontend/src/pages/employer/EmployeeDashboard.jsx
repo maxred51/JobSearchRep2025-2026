@@ -1,24 +1,74 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import EmployeeHeader from "../../components/EmployeeHeader";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 import "../../styles/employer/EmployeeDashboard.css";
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
+  const [jobOffers, setJobOffers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const jobOffers = [
-    { id: 1, title: "Logistyk", location: "Warszawa", status: "Aktywna", applications: 10 },
-    { id: 2, title: "Specjalista ds. zakupów", location: "Kraków", status: "Zakończona", applications: 4 },
-  ];
+  useEffect(() => {
+  const fetchOffers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const [offersRes, appsRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/oferta/", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/aplikacja/", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-  const handleManage = () => {
-    navigate(`/edit`);
+      const applications = appsRes.data;
+      const offersWithCounts = offersRes.data.map((offer) => {
+        const count = applications.filter(
+          (app) => app.oferta_id === offer.id
+        ).length;
+        return { ...offer, liczba_aplikacji: count };
+      });
+
+      setJobOffers(offersWithCounts);
+    } catch (error) {
+      console.error("❌ Błąd podczas pobierania danych:", error);
+    }
+  };
+
+  fetchOffers();
+}, []);
+
+
+  const handleManage = (id) => {
+    navigate(`/edit/${id}`);
   };
 
   const handleAdd = () => {
     navigate("/add");
   };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Czy na pewno chcesz usunąć tę ofertę?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/oferta/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`, 
+          },
+        });
+      setJobOffers((prev) => prev.filter((offer) => offer.id !== id));
+    } catch (error) {
+      console.error("❌ Błąd podczas usuwania oferty:", error);
+      alert("Nie udało się usunąć oferty.");
+    }
+  };
+
+  const filteredOffers = jobOffers.filter((offer) =>
+    offer.tytul?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="employee-dashboard-page">
@@ -36,6 +86,8 @@ export default function EmployeeDashboard() {
                 type="text"
                 placeholder="Szukaj..."
                 className="search-input"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
               <button className="add-offer-btn" onClick={handleAdd}>
                 ➕ Dodaj ofertę
@@ -53,23 +105,36 @@ export default function EmployeeDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {jobOffers.map((offer) => (
-                  <tr key={offer.id}>
-                    <td>{offer.title}</td>
-                    <td>{offer.location}</td>
-                    <td>{offer.status}</td>
-                    <td>{offer.applications}</td>
-                    <td>
-                      <button
-                        className="manage-btn"
-                        onClick={() => handleManage(offer.id)}
-                      >
-                        ✏️ Zarządzaj
-                      </button>
-                      <button className="delete-btn">🗑️ Usuń</button>
+                {filteredOffers.length > 0 ? (
+                  filteredOffers.map((offer) => (
+                    <tr key={offer.id}>
+                      <td>{offer.tytul}</td>
+                      <td>{offer.lokalizacja}</td>
+                      <td>{offer.status}</td>
+                      <td>{offer.liczba_aplikacji || 0}</td>
+                      <td>
+                        <button
+                          className="manage-btn"
+                          onClick={() => handleManage(offer.id)}
+                        >
+                          ✏️ Zarządzaj
+                        </button>
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDelete(offer.id)}
+                        >
+                          🗑️ Usuń
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: "center" }}>
+                      Brak ofert do wyświetlenia
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </section>

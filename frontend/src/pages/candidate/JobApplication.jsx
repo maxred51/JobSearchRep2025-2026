@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "../../styles/candidate/JobApplication.css";
 import Header from "../../components/Header";
+import { useParams } from "react-router-dom";
 
 function JobApplication() {
+  const { id } = useParams(); 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -11,8 +14,46 @@ function JobApplication() {
     salary: "",
     competence: "",
     consent: false,
-    cvFile: null,
   });
+
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
+      const userId = payload.id;
+
+      console.log("🧩 ID użytkownika:", userId);
+
+      const res = await axios.get(`http://localhost:5000/api/kandydat/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const { imie, nazwisko, email, telefon } = res.data;
+      setFormData((prev) => ({
+        ...prev,
+        firstName: imie || "",
+        lastName: nazwisko || "",
+        email: email || "",
+        phone: telefon || "",
+      }));
+    } catch (err) {
+      console.error("❌ Błąd przy pobieraniu profilu:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchUserData();
+}, []);
+
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -27,11 +68,51 @@ function JobApplication() {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Dane aplikacji:", formData);
-    alert("Formularz wysłany!");
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+  setMessage("");
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    setMessage("Musisz być zalogowany, aby aplikować.");
+    setSubmitting(false);
+    return;
+  }
+
+  try {
+    const payload = {
+      Ofertaid: id, 
+      kwota: parseFloat(formData.salary),
+      odpowiedz: formData.competence,
+    };
+
+    console.log("📤 Wysyłane dane:", payload);
+
+    const response = await axios.post(
+      "http://localhost:5000/api/aplikacja",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("✅ Aplikacja wysłana:", response.data);
+    setMessage("✅ Twoja aplikacja została wysłana pomyślnie!");
+  } catch (err) {
+    console.error("❌ Błąd przy wysyłaniu aplikacji:", err.response?.data || err);
+    setMessage(err.response?.data?.error || "❌ Nie udało się wysłać aplikacji.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+
+  if (loading) return <p>Ładowanie danych użytkownika...</p>;
 
   return (
     <div className="application-page">
@@ -39,6 +120,8 @@ function JobApplication() {
 
       <main className="application-container">
         <h2 className="form-title">Formularz aplikacyjny</h2>
+
+        {message && <p className="form-message">{message}</p>}
 
         <form className="application-form" onSubmit={handleSubmit}>
           <div className="form-columns">
@@ -50,8 +133,8 @@ function JobApplication() {
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  placeholder="Jan"
                   required
+                  readOnly
                 />
               </label>
 
@@ -62,8 +145,8 @@ function JobApplication() {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  placeholder="Kowalski"
                   required
+                  readOnly
                 />
               </label>
 
@@ -74,8 +157,8 @@ function JobApplication() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="jan.kowalski@email.com"
                   required
+                  readOnly
                 />
               </label>
 
@@ -86,17 +169,7 @@ function JobApplication() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="+48 555 555 555"
-                />
-              </label>
-
-              <label>
-                CV*:
-                <input
-                  type="file"
-                  name="cvFile"
-                  onChange={handleChange}
-                  required
+                  readOnly
                 />
               </label>
 
@@ -143,8 +216,8 @@ function JobApplication() {
             <a href="/" className="back-link">
               ← Powrót
             </a>
-            <button type="submit" className="apply-btn">
-              Aplikuj
+            <button type="submit" className="apply-btn" disabled={submitting}>
+              {submitting ? "Wysyłanie..." : "Aplikuj"}
             </button>
           </div>
         </form>

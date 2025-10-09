@@ -36,6 +36,9 @@ const io = new Server(server, {
   }
 });
 
+app.set("io", io);
+
+
 // Middleware globalne
 app.use(cors());
 app.use(express.json());

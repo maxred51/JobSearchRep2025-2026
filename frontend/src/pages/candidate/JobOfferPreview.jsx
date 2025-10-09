@@ -1,62 +1,83 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import axios from "axios";
 import "../../styles/candidate/JobOfferPreview.css";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 
 function JobOfferPreview() {
+  const { id } = useParams();
+  const [offer, setOffer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchOffer = async () => {
+      try {
+        const token = localStorage.getItem("token");  
+        const response = await axios.get(`http://localhost:5000/api/oferta/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`, 
+          },
+        });
+        console.log("📥 Szczegóły oferty:", response.data);
+        setOffer(response.data);
+      } catch (err) {
+        console.error("❌ Błąd przy pobieraniu oferty:", err);
+        setError("Nie udało się pobrać danych oferty.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOffer();
+  }, [id]);
+
+  if (loading) return <p>Ładowanie oferty...</p>;
+  if (error) return <p>{error}</p>;
+  if (!offer) return <p>Nie znaleziono oferty.</p>;
+
+  const {
+    tytul,
+    opis,
+    firma,
+    wymagania,
+    lokalizacja,
+    czas,
+    wynagrodzenie,
+  } = offer;
+
   return (
     <div className="dashboard-wrapper">
       <Header />
 
       <div className="dashboard-content">
+        <Sidebar role="candidate" active="overview" />
 
         <main className="offer-section">
-          <h2 className="offer-title">Tytuł oferty</h2>
+          <h2 className="offer-title">{tytul || "Brak tytułu"}</h2>
 
-          <p><b>Nazwa firmy:</b> loremipsum</p>
-          <p><b>Opis stanowiska:</b> loremipsum loremipsum</p>
+          <p><b>Nazwa firmy:</b> {firma || "Nie podano"}</p>
+          <p><b>Lokalizacja:</b> {lokalizacja || "Brak informacji"}</p>
+          <p><b>Wynagrodzenie:</b> {wynagrodzenie ? `${wynagrodzenie} zł` : "Nie podano"}</p>
+          <p><b>Opis stanowiska:</b> {opis || "Brak opisu"}</p>
 
           <div className="offer-block">
-            <b>Zadania stanowiska:</b>
-            <ul>
-              <li><input type="checkbox" /> loremipsum</li>
-              <li><input type="checkbox" /> loremipsum</li>
-            </ul>
+            <b>Wymagania:</b>
+            <p>{wymagania || "Brak wymagań"}</p>
           </div>
-
           <div className="offer-block">
-            <b>Niezbędne wymagania stanowiska:</b>
-            <p>loremipsum</p>
-          </div>
-
-          <div className="offer-block">
-            <b>Mile widziane wymagania stanowiska:</b>
-            <ul>
-              <li><input type="checkbox" /> loremipsum</li>
-            </ul>
-          </div>
-
-          <div className="offer-block">
-            <b>Korzyści z pracy:</b>
-            <ul>
-              <li><input type="checkbox" /> loremipsum</li>
-            </ul>
-          </div>
-
-          <div className="offer-block">
-            <b>Dodatkowe informacje:</b>
-            <p>loremipsum</p>
+            <b>Czas pracy:</b>
+            <p>{czas ? `${czas} godzin tygodniowo` : "Nie określono"}</p>
           </div>
 
           <div className="offer-footer">
-            <img
-              src="https://i.ibb.co/JxzWwZV/beaver.png"
-              alt="Maskotka firmy"
-              className="offer-image"
-            />
             <div className="offer-links">
-              <a href="/" className="back-link">Powrót do strony głównej</a>
-              <a href="/apply" className="apply-link">Aplikuj na ofertę</a>
+              <Link to="/" className="back-link">
+                Powrót do strony głównej
+              </Link>
+              <Link to={`/apply/${id}`} className="apply-link">
+                Aplikuj na ofertę
+              </Link>
             </div>
           </div>
         </main>

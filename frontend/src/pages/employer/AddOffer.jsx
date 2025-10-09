@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import "../../styles/employer/addOffer.css";
+import axios from "axios";
 
-import Header from "../../components/Header";
+import EmployeeHeader from "../../components/EmployeeHeader";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 
 export default function AddOffer() {
@@ -29,15 +30,77 @@ export default function AddOffer() {
     setForm((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Dodano ofertę:", form);
-    alert("Oferta (symulacja) została dodana.");
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Brak tokena — zaloguj się ponownie.");
+        return;
+      }
+
+      const res = await axios.post(
+        "http://localhost:5000/api/oferta",
+        {
+          tytuł: form.title,
+          opis: form.description,
+          wynagrodzenie: parseFloat(form.salary),
+          wymagania: form.requirements,
+          lokalizacja: form.location,
+          czas: parseInt(form.workTime),
+          KategoriaPracyid: parseInt(form.category),
+          dodatkowe: {
+            stanowisko: form.position,
+            poziomJunior: form.levelJunior,
+            poziomSenior: form.levelSenior,
+            pelnyEtat: form.fullTime,
+            czescEtatu: form.partTime,
+            stacjonarna: form.stationary,
+            zdalna: form.remote,
+            umowaPraca: form.contractEmployment,
+            umowaB2B: form.contractB2B,
+          },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (res.status === 201) {
+        alert("Oferta została dodana ✅");
+        setForm({
+          title: "",
+          description: "",
+          salary: "",
+          requirements: "",
+          location: "",
+          workTime: "",
+          category: "",
+          position: "",
+          levelJunior: false,
+          levelSenior: false,
+          fullTime: false,
+          partTime: false,
+          stationary: false,
+          remote: false,
+          contractEmployment: false,
+          contractB2B: false,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      if (error.response?.data?.error) {
+        alert(`Błąd: ${error.response.data.error}`);
+      } else {
+        alert("Nie udało się dodać oferty (błąd połączenia z serwerem)");
+      }
+    }
   };
 
   return (
     <div className="employee-layout">
-      <Header />
+      <EmployeeHeader />
 
       <div className="employee-content">
         <EmployeeSidebar />
@@ -76,8 +139,8 @@ export default function AddOffer() {
                     name="salary"
                     value={form.salary}
                     onChange={handleChange}
-                    type="text"
-                    placeholder="np. 4000-6000 PLN"
+                    type="number"
+                    placeholder="np. 4000"
                   />
                 </label>
 
@@ -102,22 +165,22 @@ export default function AddOffer() {
                 </label>
 
                 <label>
-                  Czas pracy:
+                  Czas pracy (w dniach):
                   <input
                     name="workTime"
                     value={form.workTime}
                     onChange={handleChange}
-                    type="text"
+                    type="number"
                   />
                 </label>
 
                 <label>
-                  Kategoria pracy:
+                  Kategoria pracy (ID):
                   <input
                     name="category"
                     value={form.category}
                     onChange={handleChange}
-                    type="text"
+                    type="number"
                   />
                 </label>
 

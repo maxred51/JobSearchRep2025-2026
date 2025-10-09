@@ -37,7 +37,7 @@ function AppRouter() {
     <Router>
       <Routes>
         <Route path="/register" element={<Register/>} />
-        <Route path="/logout" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/settings" element={<AccountSettings />} />
         <Route path="/" element={<CandidateDashboard />} />
         <Route path="/offers" element={<ObservedOffers />} />
@@ -45,11 +45,11 @@ function AppRouter() {
         <Route path="/cv" element={<MyCV />} />
         <Route path="/opinions" element={<MyOpinions />} />
         <Route path="/communication" element={<CommunicationHistory />} />
-        <Route path="/apply" element={<JobApplication />} />
-        <Route path="/offerpreview" element={<JobOfferPreview />} />
+        <Route path="/apply/:id" element={<JobApplication />} />
+        <Route path="/offerpreview/:id" element={<JobOfferPreview />} />
         <Route path="/employee" element={<EmployeeDashboard />} />
         <Route path="/add" element={<AddOffer />} />
-        <Route path="/edit" element={<EditOffer />} />
+        <Route path="/edit/:id" element={<EditOffer />} />
         <Route path="/candidates" element={<CandidatesPage />} />
         <Route path="/applicationdetails" element={<ApplicationDetails />} />
         <Route path="/applicationoverview" element={<ApplicationsOverview />} />

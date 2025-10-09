@@ -124,4 +124,26 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/dodajLubZnajdz', async (req, res) => {
+  const { nazwa } = req.body;
+  if (!nazwa) return res.status(400).json({ error: "Brak nazwy firmy" });
+
+  try {
+    // Sprawdź, czy firma już istnieje
+    const [rows] = await pool.query("SELECT id FROM firma WHERE nazwa = ?", [nazwa]);
+
+    if (rows.length > 0) {
+      return res.json({ id: rows[0].id }); // istniejąca firma
+    }
+
+    // Dodaj nową firmę
+    const [result] = await pool.query("INSERT INTO firma (nazwa) VALUES (?)", [nazwa]);
+    res.status(201).json({ id: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Błąd serwera przy tworzeniu firmy" });
+  }
+});
+
+
 module.exports = router;

@@ -16,7 +16,7 @@ export default function AdminHeader() {
           <span className="icon">🔔</span>
         </div>
         <Link to="/settings" className="settings-link">Ustawienia konta</Link>
-        <Link to="/logout" className="logout-link">Wyloguj się</Link>
+        <Link to="/login" className="logout-link">Wyloguj się</Link>
       </div>
     </header>
   );

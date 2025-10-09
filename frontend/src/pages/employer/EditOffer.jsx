@@ -3,6 +3,7 @@ import "../../styles/employer/editOffer.css";
 import Header from "../../components/Header";
 import { useParams } from "react-router-dom";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
+import axios from "axios";
 
 export default function EditOffer() {
   const { id } = useParams();
@@ -14,7 +15,7 @@ export default function EditOffer() {
     requirements: "",
     location: "",
     workTime: "",
-    category: "",
+    category: "", // oczekujemy tu ID kategorii (liczba jako string)
     position: "",
     levelJunior: false,
     levelSenior: false,
@@ -24,28 +25,50 @@ export default function EditOffer() {
     remote: false,
     contractEmployment: false,
     contractB2B: false,
+    active: true,
   });
 
   useEffect(() => {
-    const fakeOffer = {
-      title: "Logistyk",
-      description: "Obsługa magazynu i dokumentacji logistycznej.",
-      salary: "5000-7000 PLN",
-      requirements: "Doświadczenie 2 lata, znajomość SAP.",
-      location: "Warszawa",
-      workTime: "Pełny etat",
-      category: "Logistyka",
-      position: "Specjalista",
-      levelJunior: false,
-      levelSenior: true,
-      fullTime: true,
-      partTime: false,
-      stationary: true,
-      remote: false,
-      contractEmployment: true,
-      contractB2B: false,
+    const fetchOffer = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("Brak tokena w localStorage");
+          return;
+        }
+
+        const res = await axios.get(`http://localhost:5000/api/oferta/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const d = res.data;
+        // mapujemy odpowiedź backendu na pola formularza
+        setForm({
+          title: d.tytul ?? "",
+          description: d.opis ?? "",
+          salary: d.wynagrodzenie !== undefined ? String(d.wynagrodzenie) : "",
+          requirements: d.wymagania ?? "",
+          location: d.lokalizacja ?? "",
+          workTime: d.czas !== undefined ? String(d.czas) : "",
+          category: d.KategoriaPracyid !== undefined ? String(d.KategoriaPracyid) : "",
+          position: d.stanowisko ?? "",
+          // Jeśli backend przechowuje te flagi pod innymi nazwami, zmień mapowanie
+          levelJunior: !!d.poziomJunior,
+          levelSenior: !!d.poziomSenior,
+          fullTime: !!d.pelnyEtat,
+          partTime: !!d.czescEtatu,
+          stationary: !!d.stacjonarna,
+          remote: !!d.zdalna,
+          contractEmployment: !!d.umowaPraca,
+          contractB2B: !!d.umowaB2B,
+          active: d.aktywna === undefined ? true : !!d.aktywna,
+        });
+      } catch (err) {
+        console.error("❌ Błąd pobierania oferty:", err.response?.data || err);
+      }
     };
-    setForm(fakeOffer);
+
+    fetchOffer();
   }, [id]);
 
   const handleChange = (e) => {
@@ -53,10 +76,63 @@ export default function EditOffer() {
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Edytowana oferta:", form);
-    alert("Oferta została zaktualizowana (symulacja).");
+
+    // WALIDACJA przed wysłaniem (te same zabezpieczenia co backend - szybka weryfikacja po stronie klienta)
+    if (!form.title || !form.description || !form.salary || !form.location || !form.workTime || !form.category) {
+      alert("Uzupełnij wszystkie wymagane pola: tytuł, opis, wynagrodzenie, lokalizacja, czas, kategoria (ID).");
+      return;
+    }
+
+    const wynagrodzenieNum = Number(form.salary);
+    if (Number.isNaN(wynagrodzenieNum) || wynagrodzenieNum <= 0) {
+      alert("Wynagrodzenie musi być liczbą dodatnią (np. 5000.00).");
+      return;
+    }
+
+    const czasInt = parseInt(form.workTime, 10);
+    if (Number.isNaN(czasInt) || czasInt <= 0) {
+      alert("Czas pracy musi być liczbą całkowitą dodatnią.");
+      return;
+    }
+
+    const kategoriaId = parseInt(form.category, 10);
+    if (Number.isNaN(kategoriaId)) {
+      alert("Kategoria pracy (ID) musi być liczbą całkowitą.");
+      return;
+    }
+
+    // BUDOWANIE payload z nazwami wymaganymi przez backend (zwróć uwagę na 'tytuł' z polską literą)
+    const payload = {
+      ["tytuł"]: form.title,
+      opis: form.description,
+      wynagrodzenie: wynagrodzenieNum,
+      wymagania: form.requirements || null,
+      lokalizacja: form.location,
+      czas: czasInt,
+      KategoriaPracyid: kategoriaId,
+      aktywna: !!form.active,
+    };
+
+    console.log("📤 Wysyłany payload:", payload);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Brak tokena - zaloguj się ponownie.");
+        return;
+      }
+
+      const res = await axios.put(`http://localhost:5000/api/oferta/${id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      alert("Oferta została zaktualizowana ✅");
+    } catch (err) {
+      console.error("❌ Błąd przy edycji oferty:", err.response?.data || err);
+      alert(err.response?.data?.error || "Wystąpił błąd przy aktualizacji oferty.");
+    }
   };
 
   return (
@@ -96,20 +172,16 @@ export default function EditOffer() {
               </label>
 
               <label>
-                Czas pracy:
+                Czas pracy (liczba całkowita):
                 <input name="workTime" value={form.workTime} onChange={handleChange} type="text" />
               </label>
 
               <label>
-                Kategoria pracy:
+                Kategoria pracy (ID):
                 <input name="category" value={form.category} onChange={handleChange} type="text" />
               </label>
 
-              <label>
-                Stanowisko:
-                <input name="position" value={form.position} onChange={handleChange} type="text" />
-              </label>
-
+              {/* reszta pól (checkboxy) */}
               <div className="checkbox-row">
                 <div className="checkbox-group">
                   <div className="group-title">Poziom stanowiska</div>
@@ -159,6 +231,11 @@ export default function EditOffer() {
                   </label>
                 </div>
               </div>
+
+              <label>
+                Aktywna:
+                <input type="checkbox" name="active" checked={form.active} onChange={handleChange} />
+              </label>
 
               <div className="form-actions">
                 <button type="submit" className="btn-edit">Edytuj</button>

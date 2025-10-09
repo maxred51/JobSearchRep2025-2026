@@ -12,7 +12,7 @@ export default function Header() {
         <span className="welcome">Witaj, kandydacie</span>
         <span className="notifications">🔔</span>
         <Link to="/settings" className="settings-link">Ustawienia konta</Link>
-        <Link to="/logout" className="logout-link">Wyloguj się</Link>
+        <Link to="/login" className="logout-link">Wyloguj się</Link>
       </div>
     </header>
   );
