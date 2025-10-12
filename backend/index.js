@@ -26,6 +26,10 @@ const ofertaWymiarRouter = require('./routes/oferta_wymiar');
 const kandydatKategoriaKandydataRouter = require('./routes/kandydat_kategoriakandydata');
 const powiadomienieRouter = require('./routes/powiadomienie');
 const wiadomoscRouter = require('./routes/wiadomosc');
+const opinieRouter = require('./routes/opinie');
+const obserwowanaFirmaRouter = require('./routes/obserwowana_firma');
+const zapisanaOfertaRouter = require('./routes/zapisana_oferta');
+const otpRouter = require('./routes/otp');
 
 const app = express();
 const server = http.createServer(app);
@@ -63,6 +67,10 @@ app.use('/api/oferta_wymiar', ofertaWymiarRouter);
 app.use('/api/kandydat_kategoriakandydata', kandydatKategoriaKandydataRouter);
 app.use('/api/powiadomienie', powiadomienieRouter);
 app.use('/api/wiadomosc', wiadomoscRouter);
+app.use('/api/opinie', opinieRouter);
+app.use('/api/obserwowana_firma', obserwowanaFirmaRouter);
+app.use('/api/zapisana_oferta', zapisanaOfertaRouter);
+app.use('/api/otp', otpRouter);
 
 // Autoryzacja socketów
 io.use((socket, next) => {
