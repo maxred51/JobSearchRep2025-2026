@@ -29,20 +29,33 @@ const AdminDashboard = () => {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
+        const formatStatus = (stan) => {
+          if (!stan) return "Nieznany";
+
+          const s = stan.toLowerCase().trim();
+
+          if (s === "aktywny") return "Aktywny";
+          if (s === "zablokowany") return "Zablokowany";
+
+          return "Nieznany";
+        };
+
 
         const kandydaci = kandydaciRes.data.map((k) => ({
-          id: k.id,
-          name: `${k.imie} ${k.nazwisko}`,
-          role: "Kandydat",
-          status: k.status || "Aktywny",
-        }));
+  id: k.id,
+  name: `${k.imie} ${k.nazwisko}`,
+  role: "Kandydat",
+  status: formatStatus(k.stan),
+}));
 
-        const pracownicy = pracownicyRes.data.map((p) => ({
-          id: p.id,
-          name: `${p.imie} ${p.nazwisko}`,
-          role: "Pracownik HR",
-          status: p.status || "Aktywny",
-        }));
+const pracownicy = pracownicyRes.data.map((p) => ({
+  id: p.id,
+  name: `${p.imie} ${p.nazwisko}`,
+  role: "Pracownik HR",
+  status: formatStatus(p.stan),
+}));
+
+
 
         const allUsers = [...kandydaci, ...pracownicy];
         setUsers(allUsers);
@@ -134,7 +147,7 @@ const AdminDashboard = () => {
                       <td>{u.role}</td>
                       <td>{u.status}</td>
                       <td>
-                        <Link to={`/management/${u.role}/${u.id}`} className="btn-manage">
+                        <Link to={`/admin/uzytkownicy/${u.id}`} className="btn-manage">
                           Zarządzaj
                         </Link>
                       </td>

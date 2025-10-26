@@ -87,7 +87,7 @@ router.get('/', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path FROM kandydat');
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path, stan FROM kandydat');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -101,7 +101,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path FROM kandydat WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, cv_path, stan FROM kandydat WHERE id = ?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Kandydat nie znaleziony' });
     }

@@ -15,34 +15,48 @@ export default function EditOffer() {
     requirements: "",
     location: "",
     workTime: "",
-    category: "", // oczekujemy tu ID kategorii (liczba jako string)
+    category: "",
     position: "",
-    levelJunior: false,
-    levelSenior: false,
-    fullTime: false,
-    partTime: false,
-    stationary: false,
-    remote: false,
-    contractEmployment: false,
-    contractB2B: false,
     active: true,
+    modes: [],
+    levels: [],
+    dimensions: [],
+    contracts: [],
   });
 
+  const [availableModes, setAvailableModes] = useState([]);
+  const [availableLevels, setAvailableLevels] = useState([]);
+  const [availableDimensions, setAvailableDimensions] = useState([]);
+  const [availableContracts, setAvailableContracts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchOffer = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("Brak tokena w localStorage");
-          return;
-        }
+        if (!token) return;
 
-        const res = await axios.get(`http://localhost:5000/api/oferta/${id}`, {
+        const resOffer = await axios.get(`/oferta/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = resOffer.data;
+
+        const [modesRes, levelsRes, dimensionsRes, contractsRes] = await Promise.all([
+          axios.get("/tryb", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("/poziom", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("/wymiar", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("/umowa", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        setAvailableModes(modesRes.data);
+        setAvailableLevels(levelsRes.data);
+        setAvailableDimensions(dimensionsRes.data);
+        setAvailableContracts(contractsRes.data);
+
+        const resLinks = await axios.get(`/oferta/${id}/powiazania`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const d = res.data;
-        // mapujemy odpowiedź backendu na pola formularza
         setForm({
           title: d.tytul ?? "",
           description: d.opis ?? "",
@@ -51,195 +65,168 @@ export default function EditOffer() {
           location: d.lokalizacja ?? "",
           workTime: d.czas !== undefined ? String(d.czas) : "",
           category: d.KategoriaPracyid !== undefined ? String(d.KategoriaPracyid) : "",
-          position: d.stanowisko ?? "",
-          // Jeśli backend przechowuje te flagi pod innymi nazwami, zmień mapowanie
-          levelJunior: !!d.poziomJunior,
-          levelSenior: !!d.poziomSenior,
-          fullTime: !!d.pelnyEtat,
-          partTime: !!d.czescEtatu,
-          stationary: !!d.stacjonarna,
-          remote: !!d.zdalna,
-          contractEmployment: !!d.umowaPraca,
-          contractB2B: !!d.umowaB2B,
           active: d.aktywna === undefined ? true : !!d.aktywna,
+          modes: resLinks.data.tryby.map(String) || [],
+          levels: resLinks.data.poziomy.map(String) || [],
+          dimensions: resLinks.data.wymiary.map(String) || [],
+          contracts: resLinks.data.umowy.map(String) || [],
         });
       } catch (err) {
-        console.error("❌ Błąd pobierania oferty:", err.response?.data || err);
+        console.error("Błąd pobierania oferty:", err.response?.data || err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchOffer();
+    fetchData();
   }, [id]);
 
   const handleChange = (e) => {
-    const { name, type, value, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    const { name, type, value } = e.target;
+    if (type === "checkbox") {
+      setForm((prev) => {
+        const arr = prev[name].includes(value)
+          ? prev[name].filter((x) => x !== value)
+          : [...prev[name], value];
+        return { ...prev, [name]: arr };
+      });
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // WALIDACJA przed wysłaniem (te same zabezpieczenia co backend - szybka weryfikacja po stronie klienta)
-    if (!form.title || !form.description || !form.salary || !form.location || !form.workTime || !form.category) {
-      alert("Uzupełnij wszystkie wymagane pola: tytuł, opis, wynagrodzenie, lokalizacja, czas, kategoria (ID).");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Brak tokena — zaloguj się ponownie.");
       return;
     }
 
-    const wynagrodzenieNum = Number(form.salary);
-    if (Number.isNaN(wynagrodzenieNum) || wynagrodzenieNum <= 0) {
-      alert("Wynagrodzenie musi być liczbą dodatnią (np. 5000.00).");
-      return;
-    }
-
-    const czasInt = parseInt(form.workTime, 10);
-    if (Number.isNaN(czasInt) || czasInt <= 0) {
-      alert("Czas pracy musi być liczbą całkowitą dodatnią.");
-      return;
-    }
-
-    const kategoriaId = parseInt(form.category, 10);
-    if (Number.isNaN(kategoriaId)) {
-      alert("Kategoria pracy (ID) musi być liczbą całkowitą.");
-      return;
-    }
-
-    // BUDOWANIE payload z nazwami wymaganymi przez backend (zwróć uwagę na 'tytuł' z polską literą)
-    const payload = {
-      ["tytuł"]: form.title,
-      opis: form.description,
-      wynagrodzenie: wynagrodzenieNum,
-      wymagania: form.requirements || null,
-      lokalizacja: form.location,
-      czas: czasInt,
-      KategoriaPracyid: kategoriaId,
-      aktywna: !!form.active,
-    };
-
-    console.log("📤 Wysyłany payload:", payload);
+    const headers = { Authorization: `Bearer ${token}` };
+    console.log("📦 Dane wysyłane do backendu:", form);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Brak tokena - zaloguj się ponownie.");
-        return;
-      }
+      await axios.put(
+        `http://localhost:5000/api/oferta/${id}`,
+        {
+          tytuł: form.title,
+          opis: form.description,
+          wynagrodzenie: parseFloat(form.salary) || 0,
+          wymagania: form.requirements,
+          lokalizacja: form.location,
+          czas: parseInt(form.workTime),
+          aktywna: form.active,
+          KategoriaPracyid: form.category ? parseInt(form.category) : null,
+        },
+        { headers }
+      );
 
-      const res = await axios.put(`http://localhost:5000/api/oferta/${id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const updateLinks = async (type, values, key) => {
+        const res = await axios.get(`http://localhost:5000/api/oferta/${id}/powiazania`, { headers });
 
-      alert("Oferta została zaktualizowana ✅");
+        const typeMap = {
+          oferta_tryb: "tryby",
+          oferta_poziom: "poziomy",
+          oferta_wymiar: "wymiary",
+          oferta_umowa: "umowy",
+        };
+
+        const current = res.data[typeMap[type]] || [];
+
+        for (const val of current) {
+          try {
+            await axios.delete(`http://localhost:5000/api/${type}/${id}/${val}`, { headers });
+          } catch (err) {
+            console.warn(`Nie udało się usunąć powiązania ${type}:`, err);
+          }
+        }
+
+        for (const val of values) {
+          await axios.post(
+            `http://localhost:5000/api/${type}`,
+            { Ofertaid: id, [key]: val },
+            { headers }
+          );
+        }
+      };
+
+      await updateLinks("oferta_tryb", form.modes, "Trybid");
+      await updateLinks("oferta_poziom", form.levels, "Poziomid");
+      await updateLinks("oferta_wymiar", form.dimensions, "Wymiarid");
+      await updateLinks("oferta_umowa", form.contracts, "Umowaid");
+
+      alert("✅ Oferta została pomyślnie zaktualizowana!");
     } catch (err) {
-      console.error("❌ Błąd przy edycji oferty:", err.response?.data || err);
-      alert(err.response?.data?.error || "Wystąpił błąd przy aktualizacji oferty.");
+      console.error("❌ Błąd przy aktualizacji oferty:", err.response?.data || err);
+      alert(err.response?.data?.error || "Nie udało się zaktualizować oferty.");
     }
   };
+
+
+
+  if (loading) return <p>Ładowanie opcji...</p>;
 
   return (
     <div className="edit-offer-page">
       <Header />
       <div className="edit-offer-content">
         <EmployeeSidebar />
-
         <main className="edit-offer-main">
           <a href="/employee" className="back-link">← Powrót</a>
           <h2>Edytowanie oferty</h2>
           <form className="edit-offer-form" onSubmit={handleSubmit}>
             <div className="form-card">
-              <label>
-                Tytuł oferty:
-                <input name="title" value={form.title} onChange={handleChange} type="text" />
-              </label>
+              <label>Tytuł oferty:<input name="title" value={form.title} onChange={handleChange} type="text"/></label>
+              <label>Opis:<textarea name="description" value={form.description} onChange={handleChange}/></label>
+              <label>Wynagrodzenie:<input name="salary" value={form.salary} onChange={handleChange} type="text"/></label>
+              <label>Wymagania:<textarea name="requirements" value={form.requirements} onChange={handleChange}/></label>
+              <label>Lokalizacja:<input name="location" value={form.location} onChange={handleChange} type="text"/></label>
+              <label>Czas pracy:<input name="workTime" value={form.workTime} onChange={handleChange} type="text"/></label>
+              <label>Kategoria pracy (ID):<input name="category" value={form.category} onChange={handleChange} type="text"/></label>
 
-              <label>
-                Opis:
-                <textarea name="description" value={form.description} onChange={handleChange} />
-              </label>
-
-              <label>
-                Wynagrodzenie:
-                <input name="salary" value={form.salary} onChange={handleChange} type="text" />
-              </label>
-
-              <label>
-                Wymagania:
-                <textarea name="requirements" value={form.requirements} onChange={handleChange} />
-              </label>
-
-              <label>
-                Lokalizacja:
-                <input name="location" value={form.location} onChange={handleChange} type="text" />
-              </label>
-
-              <label>
-                Czas pracy (liczba całkowita):
-                <input name="workTime" value={form.workTime} onChange={handleChange} type="text" />
-              </label>
-
-              <label>
-                Kategoria pracy (ID):
-                <input name="category" value={form.category} onChange={handleChange} type="text" />
-              </label>
-
-              {/* reszta pól (checkboxy) */}
               <div className="checkbox-row">
                 <div className="checkbox-group">
                   <div className="group-title">Poziom stanowiska</div>
-                  <label>
-                    <input type="checkbox" name="levelJunior" checked={form.levelJunior} onChange={handleChange} />
-                    Junior
-                  </label>
-                  <label>
-                    <input type="checkbox" name="levelSenior" checked={form.levelSenior} onChange={handleChange} />
-                    Senior
-                  </label>
+                  {availableLevels.map(lvl => (
+                    <label key={lvl.id}>
+                      <input type="checkbox" name="levels" value={String(lvl.id)} checked={form.levels.includes(String(lvl.id))} onChange={handleChange}/>
+                      {lvl.nazwa || lvl.name}
+                    </label>
+                  ))}
                 </div>
-
                 <div className="checkbox-group">
                   <div className="group-title">Wymiar pracy</div>
-                  <label>
-                    <input type="checkbox" name="fullTime" checked={form.fullTime} onChange={handleChange} />
-                    Pełny etat
-                  </label>
-                  <label>
-                    <input type="checkbox" name="partTime" checked={form.partTime} onChange={handleChange} />
-                    Część etatu
-                  </label>
+                  {availableDimensions.map(dim => (
+                    <label key={dim.id}>
+                      <input type="checkbox" name="dimensions" value={String(dim.id)} checked={form.dimensions.includes(String(dim.id))} onChange={handleChange}/>
+                      {dim.nazwa || dim.name}
+                    </label>
+                  ))}
                 </div>
-
                 <div className="checkbox-group">
                   <div className="group-title">Tryb pracy</div>
-                  <label>
-                    <input type="checkbox" name="stationary" checked={form.stationary} onChange={handleChange} />
-                    Stacjonarna
-                  </label>
-                  <label>
-                    <input type="checkbox" name="remote" checked={form.remote} onChange={handleChange} />
-                    Zdalna
-                  </label>
+                  {availableModes.map(mode => (
+                    <label key={mode.id}>
+                      <input type="checkbox" name="modes" value={String(mode.id)} checked={form.modes.includes(String(mode.id))} onChange={handleChange}/>
+                      {mode.nazwa || mode.name}
+                    </label>
+                  ))}
                 </div>
-
                 <div className="checkbox-group">
                   <div className="group-title">Umowa</div>
-                  <label>
-                    <input type="checkbox" name="contractEmployment" checked={form.contractEmployment} onChange={handleChange} />
-                    Umowa o pracę
-                  </label>
-                  <label>
-                    <input type="checkbox" name="contractB2B" checked={form.contractB2B} onChange={handleChange} />
-                    B2B
-                  </label>
+                  {availableContracts.map(c => (
+                    <label key={c.id}>
+                      <input type="checkbox" name="contracts" value={String(c.id)} checked={form.contracts.includes(String(c.id))} onChange={handleChange}/>
+                      {c.nazwa || c.name}
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              <label>
-                Aktywna:
-                <input type="checkbox" name="active" checked={form.active} onChange={handleChange} />
-              </label>
-
-              <div className="form-actions">
-                <button type="submit" className="btn-edit">Edytuj</button>
-              </div>
+              <label>Aktywna:<input type="checkbox" name="active" checked={form.active} onChange={handleChange}/></label>
+              <div className="form-actions"><button type="submit" className="btn-edit">Edytuj</button></div>
             </div>
           </form>
         </main>

@@ -5,7 +5,7 @@ const authMiddleware = require('../middlewares/auth');
 
 // CREATE - Dodanie nowego powiązania oferta-tryb
 router.post('/', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+  if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   const { Ofertaid, Trybid } = req.body;
@@ -67,7 +67,7 @@ router.get('/:Ofertaid/:Trybid', authMiddleware, async (req, res) => {
 
 // DELETE - Usunięcie powiązania oferta-tryb
 router.delete('/:Ofertaid/:Trybid', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+  if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   const { Ofertaid, Trybid } = req.params;

@@ -1,9 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/employer/addOffer.css";
 import axios from "axios";
 
 import EmployeeHeader from "../../components/EmployeeHeader";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
+
+axios.defaults.baseURL = "http://localhost:5000/api";
+
+// Dodaj interceptor dla tokena
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 
 export default function AddOffer() {
   const [form, setForm] = useState({
@@ -15,99 +30,187 @@ export default function AddOffer() {
     workTime: "",
     category: "",
     position: "",
-    levelJunior: false,
-    levelSenior: false,
-    fullTime: false,
-    partTime: false,
-    stationary: false,
-    remote: false,
-    contractEmployment: false,
-    contractB2B: false,
+    modes: [],
+    levels: [],
+    dimensions: [],
+    contracts: [],
   });
 
+  const [availableModes, setAvailableModes] = useState([]);
+  const [availableLevels, setAvailableLevels] = useState([]);
+  const [availableDimensions, setAvailableDimensions] = useState([]);
+  const [availableContracts, setAvailableContracts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const fetchDictionaries = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [modesRes, levelsRes, dimensionsRes, contractsRes] =
+          await Promise.all([
+            axios.get("http://localhost:5000/api/tryb", { headers }),
+            axios.get("http://localhost:5000/api/poziom", { headers }),
+            axios.get("http://localhost:5000/api/wymiar", { headers }),
+            axios.get("http://localhost:5000/api/umowa", { headers }),
+          ]);
+
+        setAvailableModes(modesRes.data);
+        setAvailableLevels(levelsRes.data);
+        setAvailableDimensions(dimensionsRes.data);
+        setAvailableContracts(contractsRes.data);
+      } catch (error) {
+        console.error("Błąd pobierania danych słownikowych:", error);
+        alert("❌ Nie udało się pobrać danych słownikowych z serwera.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDictionaries();
+  }, []);
+
   const handleChange = (e) => {
-    const { name, type, value, checked } = e.target;
-    setForm((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleToggle = (field, id) => {
+    setForm((prev) => {
+      const arr = prev[field].includes(id)
+        ? prev[field].filter((x) => x !== id)
+        : [...prev[field], id];
+      return { ...prev, [field]: arr };
+    });
+  };
 
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Brak tokena — zaloguj się ponownie.");
-        return;
-      }
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-      const res = await axios.post(
-        "http://localhost:5000/api/oferta",
-        {
-          tytuł: form.title,
-          opis: form.description,
-          wynagrodzenie: parseFloat(form.salary),
-          wymagania: form.requirements,
-          lokalizacja: form.location,
-          czas: parseInt(form.workTime),
-          KategoriaPracyid: parseInt(form.category),
-          dodatkowe: {
-            stanowisko: form.position,
-            poziomJunior: form.levelJunior,
-            poziomSenior: form.levelSenior,
-            pelnyEtat: form.fullTime,
-            czescEtatu: form.partTime,
-            stacjonarna: form.stationary,
-            zdalna: form.remote,
-            umowaPraca: form.contractEmployment,
-            umowaB2B: form.contractB2B,
-          },
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (res.status === 201) {
-        alert("Oferta została dodana ✅");
-        setForm({
-          title: "",
-          description: "",
-          salary: "",
-          requirements: "",
-          location: "",
-          workTime: "",
-          category: "",
-          position: "",
-          levelJunior: false,
-          levelSenior: false,
-          fullTime: false,
-          partTime: false,
-          stationary: false,
-          remote: false,
-          contractEmployment: false,
-          contractB2B: false,
-        });
-      }
-    } catch (error) {
-      console.error(error);
-      if (error.response?.data?.error) {
-        alert(`Błąd: ${error.response.data.error}`);
-      } else {
-        alert("Nie udało się dodać oferty (błąd połączenia z serwerem)");
-      }
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Brak tokena — zaloguj się ponownie.");
+      return;
     }
-  };
+
+    const ofertaRes = await axios.post(
+      "http://localhost:5000/api/oferta",
+      {
+        tytuł: form.title,
+        opis: form.description,
+        wynagrodzenie: parseFloat(form.salary),
+        wymagania: form.requirements,
+        lokalizacja: form.location,
+        czas: parseInt(form.workTime),
+        KategoriaPracyid: parseInt(form.category),
+        stanowisko: form.position,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const ofertaId = ofertaRes.data.id; 
+    if (!ofertaId) {
+      alert("Nie udało się uzyskać ID oferty z odpowiedzi serwera.");
+      return;
+    }
+
+
+const linkOfertaTryb = async () => {
+  for (const id of form.modes) {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/oferta_tryb",
+        { Ofertaid: ofertaId, Trybid: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Błąd dodawania oferta_tryb:", err.response?.data || err);
+    }
+  }
+};
+
+const linkOfertaPoziom = async () => {
+  for (const id of form.levels) {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/oferta_poziom",
+        { Ofertaid: ofertaId, Poziomid: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Błąd dodawania oferta_poziom:", err.response?.data || err);
+    }
+  }
+};
+
+const linkOfertaWymiar = async () => {
+  for (const id of form.dimensions) {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/oferta_wymiar",
+        { Ofertaid: ofertaId, Wymiarid: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Błąd dodawania oferta_wymiar:", err.response?.data || err);
+    }
+  }
+};
+
+const linkOfertaUmowa = async () => {
+  for (const id of form.contracts) {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/oferta_umowa",
+        { Ofertaid: ofertaId, Umowaid: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Błąd dodawania oferta_umowa:", err.response?.data || err);
+    }
+  }
+};
+
+await linkOfertaTryb();
+await linkOfertaPoziom();
+await linkOfertaWymiar();
+await linkOfertaUmowa();
+
+    alert("✅ Oferta oraz powiązania zostały dodane!");
+
+    setForm({
+      title: "",
+      description: "",
+      salary: "",
+      requirements: "",
+      location: "",
+      workTime: "",
+      category: "",
+      position: "",
+      modes: [],
+      levels: [],
+      dimensions: [],
+      contracts: [],
+    });
+  } catch (error) {
+    console.error("Błąd:", error);
+    alert(error.response?.data?.error || "Błąd dodawania oferty");
+  }
+};
+
 
   return (
     <div className="employee-layout">
       <EmployeeHeader />
-
       <div className="employee-content">
         <EmployeeSidebar />
 
         <main className="employee-main">
           <section className="add-offer-section">
-            <a href="/employee" className="back-link">← Powrót</a>
+            <a href="/employee" className="back-link">
+              ← Powrót
+            </a>
             <h2>Dodawanie nowej oferty</h2>
 
             <form className="add-offer-form" onSubmit={handleSubmit}>
@@ -184,100 +287,73 @@ export default function AddOffer() {
                   />
                 </label>
 
-                <label>
-                  Stanowisko:
-                  <input
-                    name="position"
-                    value={form.position}
-                    onChange={handleChange}
-                    type="text"
-                  />
-                </label>
+                {/* 🔹 Checkboxy */}
+                {loading ? (
+                  <p>Ładowanie opcji...</p>
+                ) : (
+                  <>
+                    <div className="checkbox-group">
+                      <div className="group-title">Tryb pracy</div>
+                      {availableModes.map((item) => (
+                        <label key={item.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.modes.includes(item.id)}
+                            onChange={() => handleToggle("modes", item.id)}
+                          />
+                          {item.nazwa || item.name}
+                        </label>
+                      ))}
+                    </div>
 
-                <div className="checkbox-row">
-                  <div className="checkbox-group">
-                    <div className="group-title">Poziom stanowiska</div>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="levelJunior"
-                        checked={form.levelJunior}
-                        onChange={handleChange}
-                      /> Junior
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="levelSenior"
-                        checked={form.levelSenior}
-                        onChange={handleChange}
-                      /> Senior
-                    </label>
-                  </div>
+                    <div className="checkbox-group">
+                      <div className="group-title">Poziom stanowiska</div>
+                      {availableLevels.map((item) => (
+                        <label key={item.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.levels.includes(item.id)}
+                            onChange={() => handleToggle("levels", item.id)}
+                          />
+                          {item.nazwa || item.name}
+                        </label>
+                      ))}
+                    </div>
 
-                  <div className="checkbox-group">
-                    <div className="group-title">Wymiar pracy</div>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="fullTime"
-                        checked={form.fullTime}
-                        onChange={handleChange}
-                      /> Pełny etat
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="partTime"
-                        checked={form.partTime}
-                        onChange={handleChange}
-                      /> Część etatu
-                    </label>
-                  </div>
+                    <div className="checkbox-group">
+                      <div className="group-title">Wymiar pracy</div>
+                      {availableDimensions.map((item) => (
+                        <label key={item.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.dimensions.includes(item.id)}
+                            onChange={() => handleToggle("dimensions", item.id)}
+                          />
+                          {item.nazwa || item.name}
+                        </label>
+                      ))}
+                    </div>
 
-                  <div className="checkbox-group">
-                    <div className="group-title">Tryb pracy</div>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="stationary"
-                        checked={form.stationary}
-                        onChange={handleChange}
-                      /> Stacjonarna
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="remote"
-                        checked={form.remote}
-                        onChange={handleChange}
-                      /> Zdalna
-                    </label>
-                  </div>
-
-                  <div className="checkbox-group">
-                    <div className="group-title">Umowa</div>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="contractEmployment"
-                        checked={form.contractEmployment}
-                        onChange={handleChange}
-                      /> Umowa o pracę
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="contractB2B"
-                        checked={form.contractB2B}
-                        onChange={handleChange}
-                      /> B2B
-                    </label>
-                  </div>
-                </div>
+                    <div className="checkbox-group">
+                      <div className="group-title">Rodzaj umowy</div>
+                      {availableContracts.map((item) => (
+                        <label key={item.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.contracts.includes(item.id)}
+                            onChange={() => handleToggle("contracts", item.id)}
+                          />
+                          {item.nazwa || item.name}
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 <div className="form-actions">
-                  <button type="submit" className="btn-add">Dodaj</button>
+                  <button type="submit" className="btn-add">
+                    Dodaj
+                  </button>
                 </div>
               </div>
             </form>

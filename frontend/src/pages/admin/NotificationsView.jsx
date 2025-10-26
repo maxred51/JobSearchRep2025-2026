@@ -10,25 +10,27 @@ const NotificationsView = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const token = localStorage.getItem("token");
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-        const response = await axios.get("http://localhost:5000/api/powiadomienie/admin", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      const response = await axios.get("http://localhost:5000/api/powiadomienie/admin", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        setNotifications(response.data);
-      } catch (err) {
-        console.error("Błąd podczas pobierania powiadomień:", err);
-        setError("Nie udało się pobrać powiadomień.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      console.log("📬 Powiadomienia z backendu:", response.data); 
+      setNotifications(response.data);
+    } catch (err) {
+      console.error("Błąd podczas pobierania powiadomień:", err);
+      setError("Nie udało się pobrać powiadomień.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchNotifications();
-  }, []);
+  fetchNotifications();
+}, []);
+
 
   return (
     <div className="notifications-layout">
@@ -58,11 +60,9 @@ const NotificationsView = () => {
                 <tbody>
                   {notifications.map((n, index) => (
                     <tr key={index}>
-                      <td>{n.text || n.message}</td>
+                      <td>{n.tresc}</td>
                       <td>
-                        {n.date
-                          ? new Date(n.date).toLocaleDateString("pl-PL")
-                          : "Brak daty"}
+                        {new Date(n.data).toLocaleDateString("pl-PL")}
                       </td>
                     </tr>
                   ))}

@@ -49,6 +49,7 @@ function Register() {
 
       const res = await axios.post(url, payload);
       setMessage("Rejestracja zakończona sukcesem!");
+      navigate('/login');
       console.log(res.data);
     } catch (err) {
       console.error(err);
@@ -128,21 +129,12 @@ function Register() {
 
       {message && <p className="message">{message}</p>}
 
-      <button
-        className="back-to-login"
-        onClick={() => navigate("/login")}
-        style={{
-          marginTop: "10px",
-          backgroundColor: "#ccc",
-          color: "#000",
-          border: "none",
-          padding: "8px 16px",
-          borderRadius: "6px",
-          cursor: "pointer"
-        }}
-      >
-        ← Powrót do logowania
-      </button>
+      <p className="login-text">
+        Masz już konto?{" "}
+        <a href="/login" className="login-link">
+          Zaloguj się
+        </a>
+      </p>
     </div>
   );
 }

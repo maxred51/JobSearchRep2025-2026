@@ -6,7 +6,7 @@ const authMiddleware = require('../middlewares/auth');
 // CREATE - Dodanie nowego powiązania oferta-wymiar
 router.post('/', authMiddleware, async (req, res) => {
   // Sprawdzenie roli (pracownikhr lub administrator)
-  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+  if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
 
@@ -70,7 +70,7 @@ router.get('/:Ofertaid/:Wymiarid', authMiddleware, async (req, res) => {
 // DELETE - Usunięcie powiązania oferta-wymiar
 router.delete('/:Ofertaid/:Wymiarid', authMiddleware, async (req, res) => {
   // Sprawdzenie roli (pracownikhr lub administrator)
-  if (req.user.role !== 'pracownikhr' && req.user.role !== 'administrator') {
+  if (req.user.role !== 'pracownikHR' && req.user.role !== 'administrator') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
 

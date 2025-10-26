@@ -32,41 +32,41 @@ import StatsView from "../pages/admin/StatsView";
 import NotificationsView from "../pages/admin/NotificationsView";
 
 
-function AppRouter() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/register" element={<Register/>} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/settings" element={<AccountSettings />} />
-        <Route path="/" element={<CandidateDashboard />} />
-        <Route path="/offers" element={<ObservedOffers />} />
-        <Route path="/applications" element={<CandidateApplications />} />
-        <Route path="/cv" element={<MyCV />} />
-        <Route path="/opinions" element={<MyOpinions />} />
-        <Route path="/communication" element={<CommunicationHistory />} />
-        <Route path="/apply/:id" element={<JobApplication />} />
-        <Route path="/offerpreview/:id" element={<JobOfferPreview />} />
-        <Route path="/employee" element={<EmployeeDashboard />} />
-        <Route path="/add" element={<AddOffer />} />
-        <Route path="/edit/:id" element={<EditOffer />} />
-        <Route path="/candidates" element={<CandidatesPage />} />
-        <Route path="/applicationdetails" element={<ApplicationDetails />} />
-        <Route path="/applicationoverview" element={<ApplicationsOverview />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/candidatecv" element={<CandidateCV />} />
-        <Route path="/candidatechat" element={<CandidateChat />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/offersadmin" element={<JobOffers />} />
-        <Route path="/management" element={<UserManagement />} />
-        <Route path="/communicationview" element={<CommunicationView />} />
-        <Route path="/offeredit" element={< JobOfferEdit/>} />
-        <Route path="/offermanage" element={<JobOfferManage/>} />
-        <Route path="/stats" element={<StatsView/>} />
-        <Route path="/notifications" element={<NotificationsView/>} />
-      </Routes>
-    </Router>
-  );
-}
+  function AppRouter() {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/register" element={<Register/>} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/settings" element={<AccountSettings />} />
+          <Route path="/" element={<CandidateDashboard />} />
+          <Route path="/offers" element={<ObservedOffers />} />
+          <Route path="/applications" element={<CandidateApplications />} />
+          <Route path="/cv" element={<MyCV />} />
+          <Route path="/opinions" element={<MyOpinions />} />
+          <Route path="/communication" element={<CommunicationHistory />} />
+          <Route path="/apply/:id" element={<JobApplication />} />
+          <Route path="/offerpreview/:id" element={<JobOfferPreview />} />
+          <Route path="/employee" element={<EmployeeDashboard />} />
+          <Route path="/add" element={<AddOffer />} />
+          <Route path="/edit/:id" element={<EditOffer />} />
+          <Route path="/candidates" element={<CandidatesPage />} />
+          <Route path="/applicationdetails" element={<ApplicationDetails />} />
+          <Route path="/applicationoverview" element={<ApplicationsOverview />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/candidatecv" element={<CandidateCV />} />
+          <Route path="/candidatechat" element={<CandidateChat />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/offersadmin" element={<JobOffers />} />
+          <Route path="/admin/uzytkownicy/:id" element={<UserManagement />} />
+          <Route path="/communicationview" element={<CommunicationView />} />
+          <Route path="/offeredit/:id" element={< JobOfferEdit/>} />
+          <Route path="/offermanage/:id" element={<JobOfferManage/>} />
+          <Route path="/stats" element={<StatsView/>} />
+          <Route path="/notifications" element={<NotificationsView/>} />
+        </Routes>
+      </Router>
+    );
+  }
 
 export default AppRouter;

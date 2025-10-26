@@ -349,4 +349,45 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/:id/powiazania', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Pobranie poziomów
+    const [poziomy] = await pool.query(
+      'SELECT Poziomid FROM oferta_poziom WHERE Ofertaid = ?',
+      [id]
+    );
+
+    // Pobranie trybów
+    const [tryby] = await pool.query(
+      'SELECT Trybid FROM oferta_tryb WHERE Ofertaid = ?',
+      [id]
+    );
+
+    // Pobranie wymiarów
+    const [wymiary] = await pool.query(
+      'SELECT Wymiarid FROM oferta_wymiar WHERE Ofertaid = ?',
+      [id]
+    );
+
+    // Pobranie umów
+    const [umowy] = await pool.query(
+      'SELECT Umowaid FROM oferta_umowa WHERE Ofertaid = ?',
+      [id]
+    );
+
+    res.json({
+      poziomy: poziomy.map(p => p.Poziomid),
+      tryby: tryby.map(t => t.Trybid),
+      wymiary: wymiary.map(w => w.Wymiarid),
+      umowy: umowy.map(u => u.Umowaid)
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+
 module.exports = router;

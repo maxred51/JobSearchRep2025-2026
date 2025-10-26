@@ -49,22 +49,59 @@ export default function EmployeeDashboard() {
     navigate("/add");
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Czy na pewno chcesz usunąć tę ofertę?")) return;
+  const handleDelete = async (ofertaId) => {
+  if (!window.confirm("Czy na pewno chcesz usunąć tę ofertę?")) return;
 
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/oferta/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`, 
-          },
-        });
-      setJobOffers((prev) => prev.filter((offer) => offer.id !== id));
-    } catch (error) {
-      console.error("❌ Błąd podczas usuwania oferty:", error);
-      alert("Nie udało się usunąć oferty.");
+  const token = localStorage.getItem("token");
+
+  try {
+    const { data: powiazania } = await axios.get(
+      `http://localhost:5000/api/oferta/${ofertaId}/powiazania`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    for (const poziomId of powiazania.poziomy) {
+      await axios.delete(
+        `http://localhost:5000/api/oferta_poziom/${ofertaId}/${poziomId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
     }
-  };
+
+    for (const trybId of powiazania.tryby) {
+      await axios.delete(
+        `http://localhost:5000/api/oferta_tryb/${ofertaId}/${trybId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    }
+
+    for (const wymiarId of powiazania.wymiary) {
+      await axios.delete(
+        `http://localhost:5000/api/oferta_wymiar/${ofertaId}/${wymiarId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    }
+
+    for (const umowaId of powiazania.umowy) {
+      await axios.delete(
+        `http://localhost:5000/api/oferta_umowa/${ofertaId}/${umowaId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    }
+
+    await axios.delete(
+      `http://localhost:5000/api/oferta/${ofertaId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setJobOffers(prev => prev.filter(offer => offer.id !== ofertaId));
+
+    alert("Oferta i wszystkie powiązania zostały usunięte.");
+
+  } catch (error) {
+    console.error("❌ Błąd podczas usuwania oferty lub powiązań:", error.response?.data || error);
+    alert(error.response?.data?.error || "Nie udało się usunąć oferty lub powiązań.");
+  }
+};
 
   const filteredOffers = jobOffers.filter((offer) =>
     offer.tytul?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -110,7 +147,7 @@ export default function EmployeeDashboard() {
                     <tr key={offer.id}>
                       <td>{offer.tytul}</td>
                       <td>{offer.lokalizacja}</td>
-                      <td>{offer.status}</td>
+                      <td>{offer.aktywna}</td>
                       <td>{offer.liczba_aplikacji || 0}</td>
                       <td>
                         <button

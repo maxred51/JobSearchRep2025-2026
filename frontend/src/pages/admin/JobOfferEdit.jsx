@@ -1,220 +1,242 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import "../../styles/admin/JobOfferEdit.css";
 import AdminHeader from "../../components/AdminHeader";
 import AdminSidebar from "../../components/AdminSidebar";
 
 const JobOfferEdit = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
-    title: "Specjalista ds. administracji",
+    title: "",
     description: "",
     salary: "",
     requirements: "",
     location: "",
-    time: "",
+    workTime: "",
     category: "",
     position: "",
-    level: [],
-    workType: [],
-    mode: [],
-    contract: [],
+    active: true,
+    modes: [],
+    levels: [],
+    dimensions: [],
+    contracts: [],
   });
 
+  const [availableModes, setAvailableModes] = useState([]);
+  const [availableLevels, setAvailableLevels] = useState([]);
+  const [availableDimensions, setAvailableDimensions] = useState([]);
+  const [availableContracts, setAvailableContracts] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const resOffer = await axios.get(`http://localhost:5000/api/oferta/${id}`, { headers });
+        const d = resOffer.data;
+
+        const [modesRes, levelsRes, dimensionsRes, contractsRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/tryb", { headers }),
+          axios.get("http://localhost:5000/api/poziom", { headers }),
+          axios.get("http://localhost:5000/api/wymiar", { headers }),
+          axios.get("http://localhost:5000/api/umowa", { headers }),
+        ]);
+
+        setAvailableModes(modesRes.data);
+        setAvailableLevels(levelsRes.data);
+        setAvailableDimensions(dimensionsRes.data);
+        setAvailableContracts(contractsRes.data);
+
+        const resLinks = await axios.get(`http://localhost:5000/api/oferta/${id}/powiazania`, {
+          headers,
+        });
+
+        setForm({
+          title: d.tytul ?? "",
+          description: d.opis ?? "",
+          salary: d.wynagrodzenie !== undefined ? String(d.wynagrodzenie) : "",
+          requirements: d.wymagania ?? "",
+          location: d.lokalizacja ?? "",
+          workTime: d.czas !== undefined ? String(d.czas) : "",
+          category: d.KategoriaPracyid !== undefined ? String(d.KategoriaPracyid) : "",
+          active: d.aktywna === undefined ? true : !!d.aktywna,
+          modes: resLinks.data.tryby.map(String) || [],
+          levels: resLinks.data.poziomy.map(String) || [],
+          dimensions: resLinks.data.wymiary.map(String) || [],
+          contracts: resLinks.data.umowy.map(String) || [],
+        });
+      } catch (err) {
+        console.error("Błąd pobierania danych oferty:", err.response?.data || err);
+        alert("Nie udało się pobrać danych oferty.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === "checkbox") {
+    const { name, type, value, checked } = e.target;
+    if (type === "checkbox" && !["active"].includes(name)) {
       setForm((prev) => {
-        const arr = prev[name];
-        return {
-          ...prev,
-          [name]: checked
-            ? [...arr, value]
-            : arr.filter((item) => item !== value),
-        };
+        const arr = prev[name].includes(value)
+          ? prev[name].filter((x) => x !== value)
+          : [...prev[name], value];
+        return { ...prev, [name]: arr };
       });
+    } else if (type === "checkbox" && name === "active") {
+      setForm((prev) => ({ ...prev, active: checked }));
     } else {
-      setForm({ ...form, [name]: value });
+      setForm((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Edytowana oferta:", form);
-    alert("Oferta została zaktualizowana!");
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Brak tokena — zaloguj się ponownie.");
+      return;
+    }
+
+    const headers = { Authorization: `Bearer ${token}` };
+    console.log("📦 Dane wysyłane do backendu:", form);
+
+    try {
+      await axios.put(
+        `http://localhost:5000/api/oferta/${id}`,
+        {
+          tytuł: form.title,
+          opis: form.description,
+          wynagrodzenie: parseFloat(form.salary) || 0,
+          wymagania: form.requirements,
+          lokalizacja: form.location,
+          czas: parseInt(form.workTime),
+          aktywna: form.active,
+          KategoriaPracyid: form.category ? parseInt(form.category) : null,
+        },
+        { headers }
+      );
+
+      const updateLinks = async (type, values, key) => {
+        const res = await axios.get(`http://localhost:5000/api/oferta/${id}/powiazania`, { headers });
+
+        const typeMap = {
+          oferta_tryb: "tryby",
+          oferta_poziom: "poziomy",
+          oferta_wymiar: "wymiary",
+          oferta_umowa: "umowy",
+        };
+
+        const current = res.data[typeMap[type]] || [];
+
+        for (const val of current) {
+          try {
+            await axios.delete(`http://localhost:5000/api/${type}/${id}/${val}`, { headers });
+          } catch (err) {
+            console.warn(`Nie udało się usunąć powiązania ${type}:`, err);
+          }
+        }
+
+        for (const val of values) {
+          await axios.post(
+            `http://localhost:5000/api/${type}`,
+            { Ofertaid: id, [key]: val },
+            { headers }
+          );
+        }
+      };
+
+      await updateLinks("oferta_tryb", form.modes, "Trybid");
+      await updateLinks("oferta_poziom", form.levels, "Poziomid");
+      await updateLinks("oferta_wymiar", form.dimensions, "Wymiarid");
+      await updateLinks("oferta_umowa", form.contracts, "Umowaid");
+
+      alert("✅ Oferta została pomyślnie zaktualizowana!");
+      navigate("/offersadmin");
+    } catch (err) {
+      console.error("❌ Błąd przy aktualizacji oferty:", err.response?.data || err);
+      alert(err.response?.data?.error || "Nie udało się zaktualizować oferty.");
+    }
   };
+
+  if (loading) return <p className="loading">Ładowanie danych oferty...</p>;
 
   return (
     <div className="job-edit-layout">
-      <AdminHeader/>
-
+      <AdminHeader />
       <div className="job-edit-body">
-        <AdminSidebar active="jobs"/>
+        <AdminSidebar active="jobs" />
 
         <main className="offer-edit-main">
           <section className="offer-edit-section">
-            <a href="/offermanage" className="back-link">← Powrót</a>
-            <h2>Edycja oferty</h2>
+            <a href="/offersadmin" className="back-link">← Powrót</a>
+            <h2>Edycja oferty pracy</h2>
+
             <form onSubmit={handleSubmit} className="offer-form">
-              <label>Tytuł oferty:</label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-              />
-
-              <label>Opis:</label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-              />
-
-              <label>Wynagrodzenie:</label>
-              <input
-                type="text"
-                name="salary"
-                value={form.salary}
-                onChange={handleChange}
-              />
-
-              <label>Wymagania:</label>
-              <textarea
-                name="requirements"
-                value={form.requirements}
-                onChange={handleChange}
-              />
-
-              <label>Lokalizacja:</label>
-              <input
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-              />
-
-              <label>Czas pracy:</label>
-              <input
-                type="text"
-                name="time"
-                value={form.time}
-                onChange={handleChange}
-              />
-
-              <label>Kategoria pracy:</label>
-              <input
-                type="text"
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-              />
-
-              <label>Stanowisko:</label>
-              <input
-                type="text"
-                name="position"
-                value={form.position}
-                onChange={handleChange}
-              />
+              <label>Tytuł oferty:<input type="text" name="title" value={form.title} onChange={handleChange} /></label>
+              <label>Opis:<textarea name="description" value={form.description} onChange={handleChange} /></label>
+              <label>Wynagrodzenie:<input type="text" name="salary" value={form.salary} onChange={handleChange} /></label>
+              <label>Wymagania:<textarea name="requirements" value={form.requirements} onChange={handleChange} /></label>
+              <label>Lokalizacja:<input type="text" name="location" value={form.location} onChange={handleChange} /></label>
+              <label>Czas pracy:<input type="text" name="workTime" value={form.workTime} onChange={handleChange} /></label>
+              <label>Kategoria pracy (ID):<input type="text" name="category" value={form.category} onChange={handleChange} /></label>
 
               <div className="checkbox-group">
-                <label>Poziom stanowiska:</label>
-                <div>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="level"
-                      value="Junior"
-                      onChange={handleChange}
-                    />{" "}
-                    Junior
+                <h3>Poziom stanowiska</h3>
+                {availableLevels.map((lvl) => (
+                  <label key={lvl.id}>
+                    <input type="checkbox" name="levels" value={String(lvl.id)} checked={form.levels.includes(String(lvl.id))} onChange={handleChange} />
+                    {lvl.nazwa || lvl.name}
                   </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="level"
-                      value="Senior"
-                      onChange={handleChange}
-                    />{" "}
-                    Senior
-                  </label>
-                </div>
+                ))}
               </div>
 
               <div className="checkbox-group">
-                <label>Wymiar pracy:</label>
-                <div>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="workType"
-                      value="Pełny etat"
-                      onChange={handleChange}
-                    />{" "}
-                    Pełny etat
+                <h3>Wymiar pracy</h3>
+                {availableDimensions.map((dim) => (
+                  <label key={dim.id}>
+                    <input type="checkbox" name="dimensions" value={String(dim.id)} checked={form.dimensions.includes(String(dim.id))} onChange={handleChange} />
+                    {dim.nazwa || dim.name}
                   </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="workType"
-                      value="Część etatu"
-                      onChange={handleChange}
-                    />{" "}
-                    Część etatu
-                  </label>
-                </div>
+                ))}
               </div>
 
               <div className="checkbox-group">
-                <label>Tryb pracy:</label>
-                <div>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="mode"
-                      value="Stacjonarna"
-                      onChange={handleChange}
-                    />{" "}
-                    Stacjonarna
+                <h3>Tryb pracy</h3>
+                {availableModes.map((mode) => (
+                  <label key={mode.id}>
+                    <input type="checkbox" name="modes" value={String(mode.id)} checked={form.modes.includes(String(mode.id))} onChange={handleChange} />
+                    {mode.nazwa || mode.name}
                   </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="mode"
-                      value="Zdalna"
-                      onChange={handleChange}
-                    />{" "}
-                    Zdalna
-                  </label>
-                </div>
+                ))}
               </div>
 
               <div className="checkbox-group">
-                <label>Umowa:</label>
-                <div>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="contract"
-                      value="Umowa o pracę"
-                      onChange={handleChange}
-                    />{" "}
-                    Umowa o pracę
+                <h3>Rodzaj umowy</h3>
+                {availableContracts.map((c) => (
+                  <label key={c.id}>
+                    <input type="checkbox" name="contracts" value={String(c.id)} checked={form.contracts.includes(String(c.id))} onChange={handleChange} />
+                    {c.nazwa || c.name}
                   </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="contract"
-                      value="B2B"
-                      onChange={handleChange}
-                    />{" "}
-                    B2B
-                  </label>
-                </div>
+                ))}
               </div>
 
-              <button type="submit" className="btn-submit">
-                Zapisz zmiany
-              </button>
+              <label>
+                Aktywna:
+                <input type="checkbox" name="active" checked={form.active} onChange={handleChange} />
+              </label>
+
+              <button type="submit" className="btn-submit">💾 Zapisz zmiany</button>
             </form>
           </section>
         </main>

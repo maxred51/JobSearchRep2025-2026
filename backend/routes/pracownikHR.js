@@ -90,7 +90,7 @@ router.get('/', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid FROM pracownikHR');
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid, stan FROM pracownikHR');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -104,7 +104,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
   try {
-    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid FROM pracownikHR WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, imie, nazwisko, telefon, email, plec, Firmaid, stan FROM pracownikHR WHERE id = ?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Pracownik HR nie znaleziony' });
     }
