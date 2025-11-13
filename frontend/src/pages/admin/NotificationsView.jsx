@@ -18,7 +18,7 @@ const NotificationsView = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("📬 Powiadomienia z backendu:", response.data); 
+      console.log("Powiadomienia z backendu:", response.data); 
       setNotifications(response.data);
     } catch (err) {
       console.error("Błąd podczas pobierania powiadomień:", err);

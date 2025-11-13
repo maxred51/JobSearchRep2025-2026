@@ -49,12 +49,12 @@ export default function Categories() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert(`✅ Dodano kategorię: ${res.data.nazwa}`);
+      alert(`Dodano kategorię: ${res.data.nazwa}`);
       setNewCategory("");
       setShowAddForm(false);
       fetchCategories();
     } catch (err) {
-      console.error("❌ Błąd przy dodawaniu kategorii:", err.response?.data || err);
+      console.error("Błąd przy dodawaniu kategorii:", err.response?.data || err);
       alert(err.response?.data?.error || "Nie udało się dodać kategorii.");
     }
   };
@@ -75,11 +75,11 @@ export default function Categories() {
         { nazwa: editCategory.nazwa },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("✅ Zmieniono nazwę kategorii.");
+      alert("Zmieniono nazwę kategorii.");
       setShowEditForm(false);
       fetchCategories();
     } catch (err) {
-      console.error("❌ Błąd przy edycji:", err.response?.data || err);
+      console.error("Błąd przy edycji:", err.response?.data || err);
       alert(err.response?.data?.error || "Nie udało się zaktualizować kategorii.");
     }
   };
@@ -93,10 +93,10 @@ export default function Categories() {
       await axios.delete(`http://localhost:5000/api/kategoriakandydata/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("🗑️ Kategoria została usunięta.");
+      alert("Kategoria została usunięta.");
       fetchCategories();
     } catch (err) {
-      console.error("❌ Błąd przy usuwaniu kategorii:", err.response?.data || err);
+      console.error("Błąd przy usuwaniu kategorii:", err.response?.data || err);
       alert(err.response?.data?.error || "Nie udało się usunąć kategorii.");
     }
   };
@@ -126,7 +126,7 @@ export default function Categories() {
                 <option>Nazwa Z–A</option>
               </select>
               <button className="add-btn" onClick={() => setShowAddForm(true)}>
-                ➕ Dodaj kategorię
+                Dodaj kategorię
               </button>
             </div>
 
@@ -145,7 +145,7 @@ export default function Categories() {
                   className="cancel-btn"
                   onClick={() => setShowAddForm(false)}
                 >
-                  ❌ Anuluj
+                  Anuluj
                 </button>
               </form>
             )}
@@ -166,7 +166,7 @@ export default function Categories() {
                   className="cancel-btn"
                   onClick={() => setShowEditForm(false)}
                 >
-                  ❌ Anuluj
+                  Anuluj
                 </button>
               </form>
             )}
@@ -194,13 +194,13 @@ export default function Categories() {
                           className="edit-btn"
                           onClick={() => startEdit(cat)}
                         >
-                          ✏️ Edytuj
+                          Edytuj
                         </button>
                         <button
                           className="delete-btn"
                           onClick={() => handleDeleteCategory(cat.id)}
                         >
-                          🗑️ Usuń
+                          Usuń
                         </button>
                       </td>
                     </tr>

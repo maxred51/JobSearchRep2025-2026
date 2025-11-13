@@ -82,11 +82,11 @@
 
 .checkbox-group label {
   display: flex;
+  margin: 20px;
   align-items: center;
   gap: 8px; 
   font-weight: normal;
   cursor: pointer;
-  margin-bottom: 5px;
 }
 
 .checkbox-group input[type="checkbox"] {
@@ -94,3 +94,4 @@
   position: relative;
   top: 0; 
 }
+

@@ -6,7 +6,7 @@ import AdminSidebar from "../../components/AdminSidebar";
 import AdminHeader from "../../components/AdminHeader";
 
 const UserManagement = () => {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,9 +65,7 @@ const UserManagement = () => {
   };
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [otpStep, setOtpStep] = useState(false);
 
-  // wysyłanie OTP
   const handlePasswordReset = async () => {
     try {
       setUpdating(true);
@@ -78,7 +76,6 @@ const UserManagement = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("Wysłano kod OTP do użytkownika!");
-      setOtpStep(true);
     } catch (err) {
       console.error("Błąd przy inicjacji resetu hasła:", err);
       alert("Nie udało się wysłać kodu OTP.");
@@ -97,7 +94,6 @@ const UserManagement = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("Hasło zostało zmienione!");
-      setOtpStep(false);
       setOtp("");
       setNewPassword("");
     } catch (err) {
@@ -165,15 +161,14 @@ const UserManagement = () => {
                   >
                     Odblokuj
                   </button>
-                  {!otpStep ? (
-                    <button
-                      className="btn reset"
-                      onClick={handlePasswordReset}
-                      disabled={updating}
-                    >
-                      Wyślij kod OTP
-                    </button>
-                  ) : (
+                  <button
+                    className="btn reset"
+                    onClick={handlePasswordReset}
+                    disabled={updating}
+                  >
+                    Wyślij kod OTP
+                  </button>
+
                     <div className="otp-section">
                       <input
                         type="text"
@@ -189,13 +184,12 @@ const UserManagement = () => {
                       />
                       <button
                         onClick={handleOtpVerify}
-                        className="btn confirm"
+                        className="btn reset"
                         disabled={updating}
                       >
                         Zmień hasło
                       </button>
                     </div>
-                  )}
                 </div>
               </div>
 

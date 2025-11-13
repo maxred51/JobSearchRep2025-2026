@@ -55,7 +55,7 @@
 }
 
 .accessibility-mode {
-  display: flex;
+  display: block;
   align-items: center;
   margin-top: 15px;
   gap: 10px;
@@ -67,10 +67,10 @@
 }
 
 .delete-label {
-  display: flex;
   align-items: center;
   gap: 10px;
   font-weight: 500;
+  display: block;
 }
 
 .delete-btn {

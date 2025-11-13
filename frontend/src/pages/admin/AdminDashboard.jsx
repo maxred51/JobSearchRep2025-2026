@@ -61,7 +61,7 @@ const pracownicy = pracownicyRes.data.map((p) => ({
         setUsers(allUsers);
         setFiltered(allUsers);
 
-        console.log("📦 Pobrano użytkowników:", allUsers);
+        console.log("Pobrano użytkowników:", allUsers);
       } catch (error) {
         console.error("Błąd pobierania użytkowników:", error);
       }

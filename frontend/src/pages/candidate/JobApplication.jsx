@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "../../styles/candidate/JobApplication.css";
 import Header from "../../components/Header";
 import { useParams } from "react-router-dom";
 
 function JobApplication() {
+  const navigate = useNavigate();
   const { id } = useParams(); 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -31,7 +33,7 @@ function JobApplication() {
       const payload = JSON.parse(atob(base64));
       const userId = payload.id;
 
-      console.log("🧩 ID użytkownika:", userId);
+      console.log("ID użytkownika:", userId);
 
       const res = await axios.get(`http://localhost:5000/api/kandydat/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -46,7 +48,7 @@ function JobApplication() {
         phone: telefon || "",
       }));
     } catch (err) {
-      console.error("❌ Błąd przy pobieraniu profilu:", err);
+      console.error("Błąd przy pobieraniu profilu:", err);
     } finally {
       setLoading(false);
     }
@@ -87,7 +89,7 @@ function JobApplication() {
       odpowiedz: formData.competence,
     };
 
-    console.log("📤 Wysyłane dane:", payload);
+    console.log("Wysyłane dane:", payload);
 
     const response = await axios.post(
       "http://localhost:5000/api/aplikacja",
@@ -100,11 +102,12 @@ function JobApplication() {
       }
     );
 
-    console.log("✅ Aplikacja wysłana:", response.data);
-    setMessage("✅ Twoja aplikacja została wysłana pomyślnie!");
+    console.log("Aplikacja wysłana:", response.data);
+    setMessage("Twoja aplikacja została wysłana pomyślnie!");
+    navigate("/")
   } catch (err) {
-    console.error("❌ Błąd przy wysyłaniu aplikacji:", err.response?.data || err);
-    setMessage(err.response?.data?.error || "❌ Nie udało się wysłać aplikacji.");
+    console.error("Błąd przy wysyłaniu aplikacji:", err.response?.data || err);
+    setMessage(err.response?.data?.error || "Nie udało się wysłać aplikacji.");
   } finally {
     setSubmitting(false);
   }

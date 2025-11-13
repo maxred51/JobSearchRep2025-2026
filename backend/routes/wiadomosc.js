@@ -78,6 +78,8 @@ router.get('/lista', authMiddleware, async (req, res) => {
   }
 });
 
+
+
 // oznacz konwersację jako przeczytaną
 router.put('/mark-read/:rola/:id', authMiddleware, async (req, res) => {
   const { rola, id } = req.params;
@@ -118,6 +120,47 @@ router.put('/mark-read/:rola/:id', authMiddleware, async (req, res) => {
     );
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+router.get('/pracownicy', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT id, imie, nazwisko, email 
+      FROM pracownikHR
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error("Błąd pobierania pracowników HR:", err);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+});
+
+router.post('/send', authMiddleware, async (req, res) => {
+  const { odbiorca_id, odbiorca_typ, tresc } = req.body;
+  const { id: nadawca_id, role: nadawca_typ } = req.user;
+
+  // Walidacja
+  if (!odbiorca_id || !odbiorca_typ || !tresc) {
+    return res.status(400).json({ error: 'Brak wymaganych danych' });
+  }
+
+  if (!['kandydat', 'pracownikHR', 'administrator'].includes(odbiorca_typ)) {
+    return res.status(400).json({ error: 'Nieprawidłowy typ odbiorcy' });
+  }
+
+  try {
+    // Zapis wiadomości
+    await pool.query(
+      `INSERT INTO wiadomosc (nadawca_id, nadawca_typ, odbiorca_id, odbiorca_typ, tresc, przeczytane, data)
+       VALUES (?, ?, ?, ?, ?, FALSE, NOW())`,
+      [nadawca_id, nadawca_typ, odbiorca_id, odbiorca_typ, tresc]
+    );
+
+    res.json({ success: true, message: 'Wiadomość wysłana' });
+  } catch (err) {
+    console.error('Błąd wysyłania wiadomości:', err);
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });

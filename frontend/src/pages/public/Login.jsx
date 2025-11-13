@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
 import "../../styles/public/login.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [haslo, setHaslo] = useState("");
-  const [rola, setRola] = useState("kandydat"); 
+  const [rola, setRola] = useState("kandydat");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -16,7 +16,6 @@ function Login() {
 
     try {
       const endpoint = `http://localhost:5000/api/${rola}/login`;
-
       const response = await axios.post(endpoint, { email, haslo });
       const { token, user } = response.data;
 
@@ -40,11 +39,7 @@ function Login() {
           break;
       }
     } catch (err) {
-      if (err.response && err.response.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Błąd połączenia z serwerem");
-      }
+      setError(err.response?.data?.error || "Błąd połączenia z serwerem");
     }
   };
 
@@ -85,6 +80,13 @@ function Login() {
         Nie masz konta?{" "}
         <a href="/register" className="register-link">
           Zarejestruj się
+        </a>
+      </p>
+
+      <p className="forgot-password-text">
+        Nie pamiętasz hasła?{" "}
+        <a href="/forgot-password" className="forgot-password-link">
+          Zresetuj je
         </a>
       </p>
     </div>

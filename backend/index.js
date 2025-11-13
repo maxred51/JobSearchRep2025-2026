@@ -26,12 +26,9 @@ const ofertaWymiarRouter = require('./routes/oferta_wymiar');
 const kandydatKategoriaKandydataRouter = require('./routes/kandydat_kategoriakandydata');
 const powiadomienieRouter = require('./routes/powiadomienie');
 const wiadomoscRouter = require('./routes/wiadomosc');
-<<<<<<< HEAD
-=======
 const opinieRouter = require('./routes/opinie');
 const obserwowanaFirmaRouter = require('./routes/obserwowana_firma');
 const zapisanaOfertaRouter = require('./routes/zapisana_oferta');
->>>>>>> 656dcc70a64a2714bc1be9fd59607a7484ceca43
 const otpRouter = require('./routes/otp');
 
 const app = express();
@@ -70,12 +67,9 @@ app.use('/api/oferta_wymiar', ofertaWymiarRouter);
 app.use('/api/kandydat_kategoriakandydata', kandydatKategoriaKandydataRouter);
 app.use('/api/powiadomienie', powiadomienieRouter);
 app.use('/api/wiadomosc', wiadomoscRouter);
-<<<<<<< HEAD
-=======
 app.use('/api/opinie', opinieRouter);
 app.use('/api/obserwowana_firma', obserwowanaFirmaRouter);
 app.use('/api/zapisana_oferta', zapisanaOfertaRouter);
->>>>>>> 656dcc70a64a2714bc1be9fd59607a7484ceca43
 app.use('/api/otp', otpRouter);
 
 // Autoryzacja socketów

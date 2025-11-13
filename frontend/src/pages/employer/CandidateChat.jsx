@@ -1,29 +1,47 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate, useParams } from "react-router-dom";
 import EmployeeHeader from "../../components/EmployeeHeader";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 import "../../styles/employer/CandidateChat.css";
 
-export default function CandidateChat() {
+export default function EmployeeChat() {
   const navigate = useNavigate();
-
-  const candidate = {
-    name: "Adam Nowak",
-  };
-
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Dzień dobry, przesyłam swoje CV.", from: "candidate" },
-    { id: 2, text: "Dziękujemy, odezwiemy się wkrótce.", from: "employee" },
-    { id: 3, text: "Czy są już jakieś informacje o rekrutacji?", from: "candidate" },
-    { id: 4, text: "Jeszcze analizujemy aplikacje, proszę o cierpliwość.", from: "employee" },
-  ]);
-
+  const { candidateId } = useParams(); 
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [candidate, setCandidate] = useState(null);
 
-  const handleSend = () => {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const resCandidate = await axios.get(`http://localhost:5000/api/kandydat/${candidateId}`);
+        const resMessages = await axios.get(`http://localhost:5000/api/wiadomosc/konwersacja/kandydat/${candidateId}`);
+        setCandidate(resCandidate.data);
+        setMessages(resMessages.data);
+      } catch (err) {
+        console.error("Błąd przy pobieraniu danych czatu:", err);
+      }
+    };
+    fetchData();
+  }, [candidateId]);
+
+  const handleSend = async () => {
     if (newMessage.trim() === "") return;
-    setMessages([...messages, { id: messages.length + 1, text: newMessage, from: "employee" }]);
-    setNewMessage("");
+
+    const messageData = {
+      from: "employee",
+      to: candidateId,
+      content: newMessage,
+    };
+
+    try {
+      await axios.post("http://localhost:5000/api/wiadomosc/send", messageData);
+      setMessages([...messages, { ...messageData, id: Date.now() }]);
+      setNewMessage("");
+    } catch (err) {
+      console.error("Błąd przy wysyłaniu wiadomości:", err);
+    }
   };
 
   const handleBack = () => {
@@ -33,10 +51,8 @@ export default function CandidateChat() {
   return (
     <div className="candidate-chat-page">
       <EmployeeHeader />
-
       <div className="candidate-chat-content">
         <EmployeeSidebar />
-
         <main className="candidate-chat-main">
           <section className="chat-section">
             <button className="back-btn" onClick={handleBack}>
@@ -45,7 +61,9 @@ export default function CandidateChat() {
 
             <div className="chat-box">
               <div className="chat-header">
-                <div className="chat-user">💬 {candidate.name}</div>
+                <div className="chat-user">
+                  {candidate ? candidate.name : "Ładowanie..."}
+                </div>
                 <div className="chat-menu">☰</div>
               </div>
 
@@ -53,9 +71,11 @@ export default function CandidateChat() {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`chat-message ${msg.from === "employee" ? "from-employee" : "from-candidate"}`}
+                    className={`chat-message ${
+                      msg.from === "employee" ? "from-employee" : "from-candidate"
+                    }`}
                   >
-                    <div className="chat-bubble">{msg.text}</div>
+                    <div className="chat-bubble">{msg.content || msg.text}</div>
                   </div>
                 ))}
               </div>

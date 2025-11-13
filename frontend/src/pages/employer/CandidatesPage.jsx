@@ -1,44 +1,84 @@
 import React, { useEffect, useState } from "react";
 import "../../styles/employer/CandidatesPage.css";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
-import Header from "../../components/Header";
-import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import EmployeeHeader from "../../components/EmployeeHeader";
+import { FaEye, FaEdit } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
 const CandidatesPage = () => {
   const [candidates, setCandidates] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [assignments, setAssignments] = useState([]); 
+  const [assignments, setAssignments] = useState([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const token = localStorage.getItem("token");
+  const fetchAll = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-        const [resCandidates, resCategories, resLinks] = await Promise.all([
-          axios.get("http://localhost:5000/api/kandydat", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get("http://localhost:5000/api/kategoriakandydata", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get("http://localhost:5000/api/kandydat_kategoriakandydata", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+      const [
+        resCandidates,
+        resCategories,
+        resAssignments,
+        resApplications,
+        resOffers,
+      ] = await Promise.all([
+        axios.get("http://localhost:5000/api/kandydat", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/kategoriakandydata", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/kandydat_kategoriakandydata", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/aplikacja", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/oferta", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-        setCandidates(resCandidates.data);
-        setCategories(resCategories.data);
-        setAssignments(resLinks.data);
-      } catch (error) {
-        console.error("❌ Błąd przy pobieraniu danych:", error);
-      }
-    };
+      setCategories(resCategories.data);
+      setAssignments(resAssignments.data);
 
-    fetchAll();
-  }, []);
+      console.log("Kandydaci:", resCandidates.data);
+      console.log("Aplikacje:", resApplications.data);
+      console.log("Oferty:", resOffers.data);
+      
+
+      const pracownikHRId = parseInt(localStorage.getItem("userId")); 
+
+      const myOffers = resOffers.data.filter(
+        (o) =>
+          o.PracownikHRid === pracownikHRId || o.pracownikHRId === pracownikHRId
+      );
+      const myOfferIds = myOffers.map((o) => o.id);
+
+
+      const candidatesWithApplications = resApplications.data
+        .filter((app) => myOfferIds.includes(app.Ofertaid))
+        .map((app) => app.Kandydatid);
+
+      console.log("Kandydaci z aplikacją na moje oferty:", candidatesWithApplications);
+
+
+      const filteredCandidates = resCandidates.data.filter((c) =>
+        candidatesWithApplications.includes(c.id)
+      );
+
+      setCandidates(filteredCandidates);
+    } catch (error) {
+      console.error("Błąd przy pobieraniu danych:", error);
+    }
+  };
+
+  fetchAll();
+}, []);
+
+
 
   const getCandidateCategoryId = (candidateId) => {
     const link = assignments.find((a) => a.Kandydatid === candidateId);
@@ -46,44 +86,82 @@ const CandidatesPage = () => {
   };
 
   const handleCategoryChange = async (Kandydatid, newKategoriaId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const current = assignments.find((a) => a.Kandydatid === Kandydatid);
+  try {
+    const token = localStorage.getItem("token");
+    const headers = { Authorization: `Bearer ${token}` };
+    const current = assignments.find((a) => a.Kandydatid === Kandydatid);
 
+    if (!newKategoriaId) {
       if (current) {
-        await axios.put(
-          `http://localhost:5000/api/kandydat_kategoriakandydata/${Kandydatid}`,
-          { KategoriaKandydataid: newKategoriaId },
-          { headers: { Authorization: `Bearer ${token}` } }
+        const confirmDelete = window.confirm(
+          "Czy na pewno chcesz usunąć kategorię przypisaną do tego kandydata?"
         );
-      } else {
-        await axios.post(
-          `http://localhost:5000/api/kandydat_kategoriakandydata`,
-          { Kandydatid, KategoriaKandydataid: newKategoriaId },
-          { headers: { Authorization: `Bearer ${token}` } }
+        if (!confirmDelete) return;
+
+        await axios.delete(
+          `http://localhost:5000/api/kandydat_kategoriakandydata/${Kandydatid}/${current.KategoriaKandydataid}`,
+          { headers }
         );
+
+        setAssignments((prev) =>
+          prev.filter((a) => a.Kandydatid !== Kandydatid)
+        );
+
+        alert("Kategoria została usunięta.");
       }
-
-      setAssignments((prev) => {
-        const filtered = prev.filter((a) => a.Kandydatid !== Kandydatid);
-        return [...filtered, { Kandydatid, KategoriaKandydataid: parseInt(newKategoriaId) }];
-      });
-    } catch (error) {
-      console.error("❌ Błąd przy aktualizacji kategorii:", error);
-      alert(error.response?.data?.error || "Nie udało się zmienić kategorii");
+      return;
     }
-  };
 
-  const filteredCandidates = candidates.filter(
-    (c) =>
-      c.imie?.toLowerCase().includes(search.toLowerCase()) ||
-      c.nazwisko?.toLowerCase().includes(search.toLowerCase()) ||
-      c.email?.toLowerCase().includes(search.toLowerCase())
+    if (current) {
+      await axios.put(
+        `http://localhost:5000/api/kandydat_kategoriakandydata/${Kandydatid}`,
+        { KategoriaKandydataid: newKategoriaId },
+        { headers }
+      );
+    } else {
+      await axios.post(
+        `http://localhost:5000/api/kandydat_kategoriakandydata`,
+        { Kandydatid, KategoriaKandydataid: newKategoriaId },
+        { headers }
+      );
+    }
+
+    setAssignments((prev) => {
+      const filtered = prev.filter((a) => a.Kandydatid !== Kandydatid);
+      return [
+        ...filtered,
+        { Kandydatid, KategoriaKandydataid: parseInt(newKategoriaId) },
+      ];
+    });
+
+    alert("Kategoria została zmieniona.");
+  } catch (error) {
+    console.error("Błąd przy aktualizacji kategorii:", error);
+    alert(error.response?.data?.error || "Nie udało się zmienić kategorii");
+  }
+};
+
+
+  const submittedCategory = categories.find(
+    (cat) => cat.nazwa?.toLowerCase() === "złożona aplikacja"
   );
+  const submittedCategoryId = submittedCategory?.id;
+
+  const filteredCandidates = candidates
+    .filter(
+      (c) =>
+        c.imie?.toLowerCase().includes(search.toLowerCase()) ||
+        c.nazwisko?.toLowerCase().includes(search.toLowerCase()) ||
+        c.email?.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((c) => {
+      const catId = getCandidateCategoryId(c.id);
+      return catId !== submittedCategoryId; 
+    });
 
   return (
     <div className="employee-layout">
-      <Header />
+      <EmployeeHeader />
       <div className="employee-content">
         <EmployeeSidebar />
 
@@ -94,7 +172,7 @@ const CandidatesPage = () => {
             <div className="filters">
               <input
                 type="text"
-                placeholder="🔍 Szukaj..."
+                placeholder="Szukaj..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -139,32 +217,6 @@ const CandidatesPage = () => {
                       <Link to={`/candidatechat/${c.id}`} title="Edytuj">
                         <FaEdit className="icon" />
                       </Link>
-
-                      <FaTrash
-                        className="icon"
-                        title="Usuń przypisanie"
-                        onClick={async () => {
-                          const current = assignments.find(
-                            (a) => a.Kandydatid === c.id
-                          );
-                          if (!current) return;
-                          if (!window.confirm("Usunąć przypisanie kategorii?"))
-                            return;
-                          try {
-                            const token = localStorage.getItem("token");
-                            await axios.delete(
-                              `/api/kandydat-kategoria/${c.id}/${current.KategoriaKandydataid}`,
-                              { headers: { Authorization: `Bearer ${token}` } }
-                            );
-                            setAssignments((prev) =>
-                              prev.filter((a) => a.Kandydatid !== c.id)
-                            );
-                          } catch (err) {
-                            console.log(err);
-                            alert("Nie udało się usunąć przypisania");
-                          }
-                        }}
-                      />
                     </td>
                   </tr>
                 ))}

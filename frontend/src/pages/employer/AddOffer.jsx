@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "../../styles/employer/addOffer.css";
+import "../../styles/employer/AddOffer.css";
 import axios from "axios";
 
 import EmployeeHeader from "../../components/EmployeeHeader";
@@ -7,7 +7,6 @@ import EmployeeSidebar from "../../components/EmployeeSidebar";
 
 axios.defaults.baseURL = "http://localhost:5000/api";
 
-// Dodaj interceptor dla tokena
 axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -18,7 +17,6 @@ axios.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
-
 
 export default function AddOffer() {
   const [form, setForm] = useState({
@@ -40,28 +38,37 @@ export default function AddOffer() {
   const [availableLevels, setAvailableLevels] = useState([]);
   const [availableDimensions, setAvailableDimensions] = useState([]);
   const [availableContracts, setAvailableContracts] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchDictionaries = async () => {
       try {
         const token = localStorage.getItem("token");
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [modesRes, levelsRes, dimensionsRes, contractsRes] =
-          await Promise.all([
-            axios.get("http://localhost:5000/api/tryb", { headers }),
-            axios.get("http://localhost:5000/api/poziom", { headers }),
-            axios.get("http://localhost:5000/api/wymiar", { headers }),
-            axios.get("http://localhost:5000/api/umowa", { headers }),
-          ]);
-
+        const [
+          modesRes,
+          levelsRes,
+          dimensionsRes,
+          contractsRes,
+          categoriesRes,
+        ] = await Promise.all([
+          axios.get("/tryb", { headers }),
+          axios.get("/poziom", { headers }),
+          axios.get("/wymiar", { headers }),
+          axios.get("/umowa", { headers }),
+          axios.get("/kategoriapracy", { headers }),
+        ]);
+        console.log("Kategorie pracy:", categoriesRes.data);
         setAvailableModes(modesRes.data);
         setAvailableLevels(levelsRes.data);
         setAvailableDimensions(dimensionsRes.data);
         setAvailableContracts(contractsRes.data);
+        setAvailableCategories(categoriesRes.data);
       } catch (error) {
         console.error("Błąd pobierania danych słownikowych:", error);
-        alert("❌ Nie udało się pobrać danych słownikowych z serwera.");
+        alert("Nie udało się pobrać danych słownikowych z serwera.");
       } finally {
         setLoading(false);
       }
@@ -71,134 +78,96 @@ export default function AddOffer() {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
+    const { name, value, type, checked } = e.target;
+
+    if (type === "checkbox") {
+      setForm((prev) => {
+        const prevArr = prev[name] || [];
+        if (checked) {
+          return { ...prev, [name]: [...prevArr, value] };
+        } else {
+          return { ...prev, [name]: prevArr.filter((v) => v !== value) };
+        }
+      });
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleToggle = (field, id) => {
-    setForm((prev) => {
-      const arr = prev[field].includes(id)
-        ? prev[field].filter((x) => x !== id)
-        : [...prev[field], id];
-      return { ...prev, [field]: arr };
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Brak tokena — zaloguj się ponownie.");
+        return;
+      }
+
+      const ofertaRes = await axios.post(
+        "/oferta",
+        {
+          tytuł: form.title,
+          opis: form.description,
+          wynagrodzenie: parseFloat(form.salary),
+          wymagania: form.requirements,
+          lokalizacja: form.location,
+          czas: parseInt(form.workTime),
+          KategoriaPracyid: parseInt(form.category),
+          stanowisko: form.position,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const ofertaId = ofertaRes.data.id;
+      if (!ofertaId) {
+        alert("Nie udało się uzyskać ID oferty z odpowiedzi serwera.");
+        return;
+      }
+
+      const linkRelations = async (fieldName, endpoint, key) => {
+        for (const id of form[fieldName]) {
+          try {
+            await axios.post(
+              endpoint,
+              { Ofertaid: ofertaId, [key]: id },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (err) {
+            console.error(
+              `Błąd dodawania ${endpoint}:`,
+              err.response?.data || err
+            );
+          }
+        }
+      };
+
+      await linkRelations("modes", "/oferta_tryb", "Trybid");
+      await linkRelations("levels", "/oferta_poziom", "Poziomid");
+      await linkRelations("dimensions", "/oferta_wymiar", "Wymiarid");
+      await linkRelations("contracts", "/oferta_umowa", "Umowaid");
+
+      alert("Oferta oraz powiązania zostały dodane!");
+
+      setForm({
+        title: "",
+        description: "",
+        salary: "",
+        requirements: "",
+        location: "",
+        workTime: "",
+        category: "",
+        position: "",
+        modes: [],
+        levels: [],
+        dimensions: [],
+        contracts: [],
+      });
+    } catch (error) {
+      console.error("Błąd:", error);
+      alert(error.response?.data?.error || "Błąd dodawania oferty");
+    }
   };
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Brak tokena — zaloguj się ponownie.");
-      return;
-    }
-
-    const ofertaRes = await axios.post(
-      "http://localhost:5000/api/oferta",
-      {
-        tytuł: form.title,
-        opis: form.description,
-        wynagrodzenie: parseFloat(form.salary),
-        wymagania: form.requirements,
-        lokalizacja: form.location,
-        czas: parseInt(form.workTime),
-        KategoriaPracyid: parseInt(form.category),
-        stanowisko: form.position,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const ofertaId = ofertaRes.data.id; 
-    if (!ofertaId) {
-      alert("Nie udało się uzyskać ID oferty z odpowiedzi serwera.");
-      return;
-    }
-
-
-const linkOfertaTryb = async () => {
-  for (const id of form.modes) {
-    try {
-      await axios.post(
-        "http://localhost:5000/api/oferta_tryb",
-        { Ofertaid: ofertaId, Trybid: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error("Błąd dodawania oferta_tryb:", err.response?.data || err);
-    }
-  }
-};
-
-const linkOfertaPoziom = async () => {
-  for (const id of form.levels) {
-    try {
-      await axios.post(
-        "http://localhost:5000/api/oferta_poziom",
-        { Ofertaid: ofertaId, Poziomid: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error("Błąd dodawania oferta_poziom:", err.response?.data || err);
-    }
-  }
-};
-
-const linkOfertaWymiar = async () => {
-  for (const id of form.dimensions) {
-    try {
-      await axios.post(
-        "http://localhost:5000/api/oferta_wymiar",
-        { Ofertaid: ofertaId, Wymiarid: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error("Błąd dodawania oferta_wymiar:", err.response?.data || err);
-    }
-  }
-};
-
-const linkOfertaUmowa = async () => {
-  for (const id of form.contracts) {
-    try {
-      await axios.post(
-        "http://localhost:5000/api/oferta_umowa",
-        { Ofertaid: ofertaId, Umowaid: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error("Błąd dodawania oferta_umowa:", err.response?.data || err);
-    }
-  }
-};
-
-await linkOfertaTryb();
-await linkOfertaPoziom();
-await linkOfertaWymiar();
-await linkOfertaUmowa();
-
-    alert("✅ Oferta oraz powiązania zostały dodane!");
-
-    setForm({
-      title: "",
-      description: "",
-      salary: "",
-      requirements: "",
-      location: "",
-      workTime: "",
-      category: "",
-      position: "",
-      modes: [],
-      levels: [],
-      dimensions: [],
-      contracts: [],
-    });
-  } catch (error) {
-    console.error("Błąd:", error);
-    alert(error.response?.data?.error || "Błąd dodawania oferty");
-  }
-};
-
 
   return (
     <div className="employee-layout">
@@ -207,11 +176,10 @@ await linkOfertaUmowa();
         <EmployeeSidebar />
 
         <main className="employee-main">
+          <a href="/employee" className="back-link">← Powrót</a>
+          <h2>Dodanie nowej oferty</h2>
           <section className="add-offer-section">
-            <a href="/employee" className="back-link">
-              ← Powrót
-            </a>
-            <h2>Dodawanie nowej oferty</h2>
+            
 
             <form className="add-offer-form" onSubmit={handleSubmit}>
               <div className="form-card">
@@ -268,7 +236,7 @@ await linkOfertaUmowa();
                 </label>
 
                 <label>
-                  Czas pracy (w dniach):
+                  Liczba godzin w tygodniu:
                   <input
                     name="workTime"
                     value={form.workTime}
@@ -278,76 +246,86 @@ await linkOfertaUmowa();
                 </label>
 
                 <label>
-                  Kategoria pracy (ID):
-                  <input
+                  Kategoria pracy:
+                  <select
                     name="category"
                     value={form.category}
                     onChange={handleChange}
-                    type="number"
-                  />
+                  >
+                    <option value="">-- Wybierz kategorię --</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat.id} value={cat.KategoriaPracyid}>
+                        {cat.Nazwa}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
-                {/* 🔹 Checkboxy */}
                 {loading ? (
                   <p>Ładowanie opcji...</p>
                 ) : (
-                  <>
-                    <div className="checkbox-group">
-                      <div className="group-title">Tryb pracy</div>
-                      {availableModes.map((item) => (
-                        <label key={item.id}>
-                          <input
-                            type="checkbox"
-                            checked={form.modes.includes(item.id)}
-                            onChange={() => handleToggle("modes", item.id)}
-                          />
-                          {item.nazwa || item.name}
-                        </label>
-                      ))}
-                    </div>
-
+                  <div className="checkbox-row">
                     <div className="checkbox-group">
                       <div className="group-title">Poziom stanowiska</div>
-                      {availableLevels.map((item) => (
-                        <label key={item.id}>
+                      {availableLevels.map((lvl) => (
+                        <label key={lvl.id}>
                           <input
                             type="checkbox"
-                            checked={form.levels.includes(item.id)}
-                            onChange={() => handleToggle("levels", item.id)}
+                            name="levels"
+                            value={String(lvl.id)}
+                            checked={form.levels.includes(String(lvl.id))}
+                            onChange={handleChange}
                           />
-                          {item.nazwa || item.name}
+                          {lvl.nazwa || lvl.name}
                         </label>
                       ))}
                     </div>
-
                     <div className="checkbox-group">
                       <div className="group-title">Wymiar pracy</div>
-                      {availableDimensions.map((item) => (
-                        <label key={item.id}>
+                      {availableDimensions.map((dim) => (
+                        <label key={dim.id}>
                           <input
                             type="checkbox"
-                            checked={form.dimensions.includes(item.id)}
-                            onChange={() => handleToggle("dimensions", item.id)}
+                            name="dimensions"
+                            value={String(dim.id)}
+                            checked={form.dimensions.includes(String(dim.id))}
+                            onChange={handleChange}
                           />
-                          {item.nazwa || item.name}
+                          {dim.nazwa || dim.name}
                         </label>
                       ))}
                     </div>
-
                     <div className="checkbox-group">
-                      <div className="group-title">Rodzaj umowy</div>
-                      {availableContracts.map((item) => (
-                        <label key={item.id}>
+                      <div className="group-title">Tryb pracy</div>
+                      {availableModes.map((mode) => (
+                        <label key={mode.id}>
                           <input
                             type="checkbox"
-                            checked={form.contracts.includes(item.id)}
-                            onChange={() => handleToggle("contracts", item.id)}
+                            name="modes"
+                            value={String(mode.id)}
+                            checked={form.modes.includes(String(mode.id))}
+                            onChange={handleChange}
                           />
-                          {item.nazwa || item.name}
+                          {mode.nazwa || mode.name}
                         </label>
                       ))}
                     </div>
-                  </>
+                    <div className="checkbox-group">
+                      <div className="group-title">Umowa</div>
+                      {availableContracts.map((c) => (
+                        <label key={c.id}>
+                          <input
+                            type="checkbox"
+                            name="contracts"
+                            value={String(c.id)}
+                            checked={form.contracts.includes(String(c.id))}
+                            onChange={handleChange}
+                          />
+                          {c.nazwa || c.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <div className="form-actions">

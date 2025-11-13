@@ -29,7 +29,7 @@ router.put('/:Firmaid', authMiddleware, async (req, res) => {
   if (req.user.role !== 'kandydat') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
-  const { Firmaid } = req.params;
+  const { Firmaid } = req.params; 
   const { tresc } = req.body;
 
   // Walidacja danych

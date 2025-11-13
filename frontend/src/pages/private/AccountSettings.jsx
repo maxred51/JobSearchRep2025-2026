@@ -122,7 +122,7 @@ const handleDelete = async () => {
         <main className="settings-section">
           <div className="settings-header">
             <h2>Ustawienia konta</h2>
-            <button
+            <a 
               className="home-link"
               onClick={() => {
                 if (role === "administrator") navigate("/admin");
@@ -131,7 +131,7 @@ const handleDelete = async () => {
               }}
             >
               ← Powrót na stronę główną
-            </button>
+            </a>
           </div>
 
           {errorMessage && <div className="error-message">{errorMessage}</div>}

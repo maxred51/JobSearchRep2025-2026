@@ -20,10 +20,10 @@ function JobOfferPreview() {
             Authorization: `Bearer ${token}`, 
           },
         });
-        console.log("📥 Szczegóły oferty:", response.data);
+        console.log("Szczegóły oferty:", response.data);
         setOffer(response.data);
       } catch (err) {
-        console.error("❌ Błąd przy pobieraniu oferty:", err);
+        console.error("Błąd przy pobieraniu oferty:", err);
         setError("Nie udało się pobrać danych oferty.");
       } finally {
         setLoading(false);

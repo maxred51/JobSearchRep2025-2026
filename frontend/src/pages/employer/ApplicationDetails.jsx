@@ -1,15 +1,36 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import EmployeeHeader from "../../components/EmployeeHeader";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 import "../../styles/employer/ApplicationDetails.css";
 
 export default function ApplicationDetails() {
   const navigate = useNavigate();
+  const { Kandydatid, Ofertaid } = useParams();
+  const [application, setApplication] = useState({});
 
   const handleBack = () => {
-    navigate("/applicationoverview"); 
+    navigate("/applicationoverview");
   };
+
+  useEffect(() => {
+    const fetchApplication = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const { data } = await axios.get(
+          `http://localhost:5000/api/aplikacja/${Kandydatid}/${Ofertaid}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setApplication(data);
+      } catch (error) {
+        console.error("Błąd podczas pobierania aplikacji:", error);
+        alert(error.response?.data?.error || "Nie udało się pobrać aplikacji");
+      }
+    };
+
+    fetchApplication();
+  }, [Kandydatid, Ofertaid]);
 
   return (
     <div className="app-page">
@@ -21,27 +42,27 @@ export default function ApplicationDetails() {
         </aside>
 
         <main className="content-area">
-          <div className="content-grid">
-            <div className="left-col">
-              <button className="back-btn" onClick={handleBack}>← Powrót</button>
-              <h2 className="page-title">Treść aplikacji kandydata</h2>
-            </div>
+          <div className="application-details">
+            <button className="back-btn" onClick={handleBack}>
+              ← Powrót
+            </button>
 
-            <div className="right-col">
-              <div className="application-box">
-                <p><strong>Imię:</strong> Jan</p>
-                <p><strong>Nazwisko:</strong> Kowalski</p>
-                <p><strong>Telefon:</strong> 123-456-789</p>
-                <p><strong>E-mail:</strong> jan.kowalski@example.com</p>
+            <h2 className="page-title">Treść aplikacji kandydata</h2>
 
-                <p><strong>Jak kandydat zamierza wykorzystać swoje kompetencje na stanowisku:</strong></p>
-                <p className="application-text">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse pulvinar, 
-                  metus at bibendum vehicula, purus nunc varius sapien...
-                </p>
+            <div className="application-box">
+              <p><strong>Imię:</strong> {application.imie}</p>
+              <p><strong>Nazwisko:</strong> {application.nazwisko}</p>
+              <p><strong>Telefon:</strong> {application.telefon}</p>
+              <p><strong>E-mail:</strong> {application.email}</p>
 
-                <p><strong>Oczekiwania finansowe kandydata:</strong> 5000 PLN</p>
-              </div>
+              <p><strong>Stanowisko:</strong> {application.stanowisko}</p>
+              <p><strong>Oczekiwania finansowe:</strong> {application.kwota} PLN</p>
+              <p><strong>Status aplikacji:</strong> {application.status}</p>
+
+              <p><strong>Odpowiedź pracodawcy:</strong></p>
+              <p className="application-text">
+                {application.odpowiedz || "Brak odpowiedzi"}
+              </p>
             </div>
           </div>
         </main>

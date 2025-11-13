@@ -14,6 +14,7 @@ export default function EmployeeDashboard() {
   const fetchOffers = async () => {
     try {
       const token = localStorage.getItem("token");
+
       const [offersRes, appsRes] = await Promise.all([
         axios.get("http://localhost:5000/api/oferta/", {
           headers: { Authorization: `Bearer ${token}` },
@@ -23,17 +24,28 @@ export default function EmployeeDashboard() {
         }),
       ]);
 
-      const applications = appsRes.data;
-      const offersWithCounts = offersRes.data.map((offer) => {
-        const count = applications.filter(
-          (app) => app.oferta_id === offer.id
+      const offers = Array.isArray(offersRes.data) ? offersRes.data : [];
+      const applications = Array.isArray(appsRes.data) ? appsRes.data : [];
+
+      console.log("Oferty:", offers);
+      console.log("Aplikacje:", applications);
+
+      const offersWithCounts = offers.map((offer) => {
+        const offerId = offer.id;
+
+        const count = applications.filter((app) =>
+          app.Ofertaid === offerId || 
+          app.oferta_id === offerId ||
+          app.ofertaId === offerId ||
+          app.oferta === offerId
         ).length;
+
         return { ...offer, liczba_aplikacji: count };
       });
 
       setJobOffers(offersWithCounts);
     } catch (error) {
-      console.error("❌ Błąd podczas pobierania danych:", error);
+      console.error("Błąd podczas pobierania danych:", error);
     }
   };
 
@@ -41,67 +53,72 @@ export default function EmployeeDashboard() {
 }, []);
 
 
-  const handleManage = (id) => {
-    navigate(`/edit/${id}`);
-  };
-
-  const handleAdd = () => {
-    navigate("/add");
-  };
+  const handleManage = (id) => navigate(`/edit/${id}`);
+  const handleAdd = () => navigate("/add");
 
   const handleDelete = async (ofertaId) => {
-  if (!window.confirm("Czy na pewno chcesz usunąć tę ofertę?")) return;
+    if (!window.confirm("Czy na pewno chcesz usunąć tę ofertę?")) return;
 
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-  try {
-    const { data: powiazania } = await axios.get(
-      `http://localhost:5000/api/oferta/${ofertaId}/powiazania`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    for (const poziomId of powiazania.poziomy) {
-      await axios.delete(
-        `http://localhost:5000/api/oferta_poziom/${ofertaId}/${poziomId}`,
+    try {
+      const { data: powiazania } = await axios.get(
+        `http://localhost:5000/api/oferta/${ofertaId}/powiazania`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      const deleteRequests = [];
+
+      for (const poziomId of powiazania.poziomy || []) {
+        deleteRequests.push(
+          axios.delete(
+            `http://localhost:5000/api/oferta_poziom/${ofertaId}/${poziomId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        );
+      }
+
+      for (const trybId of powiazania.tryby || []) {
+        deleteRequests.push(
+          axios.delete(
+            `http://localhost:5000/api/oferta_tryb/${ofertaId}/${trybId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        );
+      }
+
+      for (const wymiarId of powiazania.wymiary || []) {
+        deleteRequests.push(
+          axios.delete(
+            `http://localhost:5000/api/oferta_wymiar/${ofertaId}/${wymiarId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        );
+      }
+
+      for (const umowaId of powiazania.umowy || []) {
+        deleteRequests.push(
+          axios.delete(
+            `http://localhost:5000/api/oferta_umowa/${ofertaId}/${umowaId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        );
+      }
+
+      await Promise.all(deleteRequests);
+
+      await axios.delete(`http://localhost:5000/api/oferta/${ofertaId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setJobOffers((prev) => prev.filter((offer) => offer.id !== ofertaId));
+
+      alert("Oferta i wszystkie powiązania zostały usunięte.");
+    } catch (error) {
+      console.error("Błąd podczas usuwania oferty:", error.response?.data || error);
+      alert(error.response?.data?.error || "Nie udało się usunąć oferty.");
     }
-
-    for (const trybId of powiazania.tryby) {
-      await axios.delete(
-        `http://localhost:5000/api/oferta_tryb/${ofertaId}/${trybId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    }
-
-    for (const wymiarId of powiazania.wymiary) {
-      await axios.delete(
-        `http://localhost:5000/api/oferta_wymiar/${ofertaId}/${wymiarId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    }
-
-    for (const umowaId of powiazania.umowy) {
-      await axios.delete(
-        `http://localhost:5000/api/oferta_umowa/${ofertaId}/${umowaId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    }
-
-    await axios.delete(
-      `http://localhost:5000/api/oferta/${ofertaId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    setJobOffers(prev => prev.filter(offer => offer.id !== ofertaId));
-
-    alert("Oferta i wszystkie powiązania zostały usunięte.");
-
-  } catch (error) {
-    console.error("❌ Błąd podczas usuwania oferty lub powiązań:", error.response?.data || error);
-    alert(error.response?.data?.error || "Nie udało się usunąć oferty lub powiązań.");
-  }
-};
+  };
 
   const filteredOffers = jobOffers.filter((offer) =>
     offer.tytul?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -127,7 +144,7 @@ export default function EmployeeDashboard() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <button className="add-offer-btn" onClick={handleAdd}>
-                ➕ Dodaj ofertę
+                Dodaj ofertę
               </button>
             </div>
 
@@ -137,7 +154,7 @@ export default function EmployeeDashboard() {
                   <th>Tytuł</th>
                   <th>Lokalizacja</th>
                   <th>Status</th>
-                  <th>Aplikacje</th>
+                  <th>Liczba aplikacji</th>
                   <th>Opcje</th>
                 </tr>
               </thead>
@@ -146,21 +163,23 @@ export default function EmployeeDashboard() {
                   filteredOffers.map((offer) => (
                     <tr key={offer.id}>
                       <td>{offer.tytul}</td>
-                      <td>{offer.lokalizacja}</td>
-                      <td>{offer.aktywna}</td>
-                      <td>{offer.liczba_aplikacji || 0}</td>
+                      <td>{offer.lokalizacja || "Brak danych"}</td>
+                      <td>
+                        {Number(offer.aktywna) === 1 ? "Aktywna" : "Nieaktywna"}
+                      </td>
+                      <td>{offer.liczba_aplikacji ?? 0}</td>
                       <td>
                         <button
                           className="manage-btn"
                           onClick={() => handleManage(offer.id)}
                         >
-                          ✏️ Zarządzaj
+                          Zarządzaj
                         </button>
                         <button
                           className="delete-btn"
                           onClick={() => handleDelete(offer.id)}
                         >
-                          🗑️ Usuń
+                          Usuń
                         </button>
                       </td>
                     </tr>

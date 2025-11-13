@@ -30,6 +30,7 @@ import JobOfferEdit from "../pages/admin/JobOfferEdit";
 import JobOfferManage from "../pages/admin/JobOfferManage";
 import StatsView from "../pages/admin/StatsView";
 import NotificationsView from "../pages/admin/NotificationsView";
+import ForgotPassword from "../pages/public/ForgotPassword";
 
 
   function AppRouter() {
@@ -38,6 +39,7 @@ import NotificationsView from "../pages/admin/NotificationsView";
         <Routes>
           <Route path="/register" element={<Register/>} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword/>} />
           <Route path="/settings" element={<AccountSettings />} />
           <Route path="/" element={<CandidateDashboard />} />
           <Route path="/offers" element={<ObservedOffers />} />
@@ -51,11 +53,11 @@ import NotificationsView from "../pages/admin/NotificationsView";
           <Route path="/add" element={<AddOffer />} />
           <Route path="/edit/:id" element={<EditOffer />} />
           <Route path="/candidates" element={<CandidatesPage />} />
-          <Route path="/applicationdetails" element={<ApplicationDetails />} />
+          <Route path="/applicationdetails/:Kandydatid/:Ofertaid" element={<ApplicationDetails />} />
           <Route path="/applicationoverview" element={<ApplicationsOverview />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/candidatecv" element={<CandidateCV />} />
-          <Route path="/candidatechat" element={<CandidateChat />} />
+          <Route path="/candidatechat/:candidateId" element={<CandidateChat />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/offersadmin" element={<JobOffers />} />
           <Route path="/admin/uzytkownicy/:id" element={<UserManagement />} />

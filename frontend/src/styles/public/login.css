@@ -44,12 +44,12 @@ body {
   text-decoration: underline;
 }
 
-.register-text {
+.register-text, .forgot-password-text {
   font-size: 14px;
   color: #333;
 }
 
-.register-link {
+.register-link, .forgot-password-link {
   color: blue;
   text-decoration: underline;
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "../../styles/candidate/candidateApplications.css";
-import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import CandidateSidebar from "../../components/Sidebar";
 
@@ -26,10 +25,10 @@ export default function CandidateApplications() {
           },
         });
 
-        console.log("📥 Dane aplikacji:", response.data);
+        console.log("Dane aplikacji:", response.data);
         setApplications(response.data);
       } catch (err) {
-        console.error("❌ Błąd przy pobieraniu aplikacji:", err);
+        console.error("Błąd przy pobieraniu aplikacji:", err);
         setError("Nie udało się pobrać aplikacji.");
       } finally {
         setLoading(false);

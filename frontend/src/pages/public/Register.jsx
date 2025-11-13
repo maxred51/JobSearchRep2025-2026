@@ -13,7 +13,7 @@ function Register() {
     plec: "M",
     rola: "kandydat",
     cv_path: "",
-    firmaNazwa: "" 
+    firmaNazwa: "",
   });
 
   const [message, setMessage] = useState("");
@@ -22,7 +22,7 @@ function Register() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -41,15 +41,13 @@ function Register() {
         );
 
         const Firmaid = firmaResponse.data.id;
-        console.log("Uzyskano Firmaid:", Firmaid);
-
         url = "http://localhost:5000/api/pracownikHR/";
         payload = { ...payload, Firmaid };
       }
 
       const res = await axios.post(url, payload);
       setMessage("Rejestracja zakończona sukcesem!");
-      navigate('/login');
+      navigate("/login");
       console.log(res.data);
     } catch (err) {
       console.error(err);
@@ -62,11 +60,41 @@ function Register() {
       <h2>Rejestracja użytkownika</h2>
 
       <form className="register-form" onSubmit={handleSubmit}>
-        <input type="text" name="imie" placeholder="Imię" onChange={handleChange} required />
-        <input type="text" name="nazwisko" placeholder="Nazwisko" onChange={handleChange} required />
-        <input type="text" name="telefon" placeholder="Telefon" onChange={handleChange} required />
-        <input type="email" name="email" placeholder="E-mail" onChange={handleChange} required />
-        <input type="password" name="haslo" placeholder="Hasło" onChange={handleChange} required />
+        <input
+          type="text"
+          name="imie"
+          placeholder="Imię"
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="nazwisko"
+          placeholder="Nazwisko"
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="telefon"
+          placeholder="Telefon"
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="E-mail"
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="password"
+          name="haslo"
+          placeholder="Hasło"
+          onChange={handleChange}
+          required
+        />
 
         <div className="radio-group">
           <label>

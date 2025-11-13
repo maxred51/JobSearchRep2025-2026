@@ -76,11 +76,11 @@ const JobOfferManage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("✅ Oferta i wszystkie powiązania zostały pomyślnie usunięte.");
+      alert("Oferta i wszystkie powiązania zostały pomyślnie usunięte.");
       navigate("/offersadmin"); 
 
     } catch (error) {
-      console.error("❌ Błąd podczas usuwania oferty:", error.response?.data || error);
+      console.error("Błąd podczas usuwania oferty:", error.response?.data || error);
       alert(error.response?.data?.error || "Nie udało się usunąć oferty lub powiązań.");
     } finally {
       setDeleting(false);

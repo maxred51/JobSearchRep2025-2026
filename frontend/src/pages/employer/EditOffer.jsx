@@ -28,6 +28,7 @@ export default function EditOffer() {
   const [availableLevels, setAvailableLevels] = useState([]);
   const [availableDimensions, setAvailableDimensions] = useState([]);
   const [availableContracts, setAvailableContracts] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,17 +42,19 @@ export default function EditOffer() {
         });
         const d = resOffer.data;
 
-        const [modesRes, levelsRes, dimensionsRes, contractsRes] = await Promise.all([
+        const [modesRes, levelsRes, dimensionsRes, contractsRes, categoriesRes] = await Promise.all([
           axios.get("/tryb", { headers: { Authorization: `Bearer ${token}` } }),
           axios.get("/poziom", { headers: { Authorization: `Bearer ${token}` } }),
           axios.get("/wymiar", { headers: { Authorization: `Bearer ${token}` } }),
           axios.get("/umowa", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("/kategoriapracy", { headers:  { Authorization: `Bearer ${token}` } }),
         ]);
 
         setAvailableModes(modesRes.data);
         setAvailableLevels(levelsRes.data);
         setAvailableDimensions(dimensionsRes.data);
         setAvailableContracts(contractsRes.data);
+        setAvailableCategories(categoriesRes.data);
 
         const resLinks = await axios.get(`/oferta/${id}/powiazania`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -105,7 +108,7 @@ export default function EditOffer() {
     }
 
     const headers = { Authorization: `Bearer ${token}` };
-    console.log("📦 Dane wysyłane do backendu:", form);
+    console.log("Dane wysyłane do backendu:", form);
 
     try {
       await axios.put(
@@ -157,9 +160,9 @@ export default function EditOffer() {
       await updateLinks("oferta_wymiar", form.dimensions, "Wymiarid");
       await updateLinks("oferta_umowa", form.contracts, "Umowaid");
 
-      alert("✅ Oferta została pomyślnie zaktualizowana!");
+      alert("Oferta została pomyślnie zaktualizowana!");
     } catch (err) {
-      console.error("❌ Błąd przy aktualizacji oferty:", err.response?.data || err);
+      console.error("Błąd przy aktualizacji oferty:", err.response?.data || err);
       alert(err.response?.data?.error || "Nie udało się zaktualizować oferty.");
     }
   };
@@ -183,8 +186,22 @@ export default function EditOffer() {
               <label>Wynagrodzenie:<input name="salary" value={form.salary} onChange={handleChange} type="text"/></label>
               <label>Wymagania:<textarea name="requirements" value={form.requirements} onChange={handleChange}/></label>
               <label>Lokalizacja:<input name="location" value={form.location} onChange={handleChange} type="text"/></label>
-              <label>Czas pracy:<input name="workTime" value={form.workTime} onChange={handleChange} type="text"/></label>
-              <label>Kategoria pracy (ID):<input name="category" value={form.category} onChange={handleChange} type="text"/></label>
+              <label>Liczba godzin w tygodniu:<input name="workTime" value={form.workTime} onChange={handleChange} type="text"/></label>
+                <label>
+                  Kategoria pracy:
+                  <select
+                    name="category"
+                    value={form.category}
+                    onChange={handleChange}
+                  >
+                    <option value="">-- Wybierz kategorię --</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat.id} value={cat.KategoriaPracyid}>
+                        {cat.Nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
               <div className="checkbox-row">
                 <div className="checkbox-group">

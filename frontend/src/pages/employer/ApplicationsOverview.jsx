@@ -16,69 +16,120 @@ export default function ApplicationsOverview() {
   const employeeId = localStorage.getItem("employeeId");
 
   useEffect(() => {
-  const fetchApplications = async () => {
+    const fetchAll = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [resApps, resAssignments, resCategories] = await Promise.all([
+          axios.get("http://localhost:5000/api/aplikacja", { headers }),
+          axios.get("http://localhost:5000/api/kandydat_kategoriakandydata", {
+            headers,
+          }),
+          axios.get("http://localhost:5000/api/kategoriakandydata", {
+            headers,
+          }),
+        ]);
+
+        const categoriesMap = {};
+        resCategories.data.forEach((cat) => {
+          categoriesMap[cat.id] = cat.nazwa;
+        });
+
+        const candidateCategoryMap = {};
+        resAssignments.data.forEach((assign) => {
+          candidateCategoryMap[assign.Kandydatid] =
+            categoriesMap[assign.KategoriaKandydataid] || "Brak kategorii";
+        });
+
+        const normalized = resApps.data.map((a) => ({
+          id: a.id,
+          Kandydatid: a.Kandydatid,
+          Ofertaid: a.Ofertaid,
+          status: a.status || "Oczekująca",
+          candidate_name:
+            a.imie && a.nazwisko
+              ? `${a.imie} ${a.nazwisko}`
+              : "Nieznany kandydat",
+          position: a.stanowisko || "Brak stanowiska",
+          category: candidateCategoryMap[a.Kandydatid] || "Brak kategorii",
+        }));
+
+        setApplications(normalized);
+      } catch (err) {
+        console.error("Błąd podczas pobierania aplikacji:", err);
+      }
+    };
+
+    fetchAll();
+  }, [employeeId]);
+
+  const handleEdit = (id) => navigate(`/employee/edit-application/${id}`);
+
+  const handleDelete = async (Kandydatid, Ofertaid) => {
+    const confirmDelete = window.confirm(
+      "Czy na pewno chcesz usunąć tę aplikację?"
+    );
+    if (!confirmDelete) return;
+
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/aplikacja", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
 
-      console.log("📦 Otrzymane dane surowe:", res.data);
+      await axios.delete(
+        `http://localhost:5000/api/aplikacja/${Kandydatid}/${Ofertaid}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      const normalized = res.data.map((a) => ({
-        id: a.id,
-        Kandydatid: a.Kandydatid,  
-        Ofertaid: a.Ofertaid,      
-        status: a.status || "Oczekująca",
-        candidate_name:
-          a.imie && a.nazwisko ? `${a.imie} ${a.nazwisko}` : "Nieznany kandydat",
-        position: a.stanowisko || "Brak stanowiska",
-        category: a.kategoria || "Brak kategorii",
-      }));
+      setApplications((prev) =>
+        prev.filter(
+          (app) => !(app.Kandydatid === Kandydatid && app.Ofertaid === Ofertaid)
+        )
+      );
 
-      setApplications(normalized);
+      alert("Aplikacja została usunięta.");
     } catch (err) {
-      console.error("❌ Błąd podczas pobierania aplikacji:", err);
+      console.error("Błąd podczas usuwania aplikacji:", err);
+      alert("Nie udało się usunąć aplikacji.");
     }
   };
 
-  fetchApplications();
-}, [employeeId]);
+  const handleStatusChange = async (app, newStatus) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5000/api/aplikacja/${app.Kandydatid}/${app.Ofertaid}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-  const handleView = (id) => navigate(`/employee/application/${id}`);
-  const handleEdit = (id) => navigate(`/employee/edit-application/${id}`);
+      setApplications((prev) =>
+        prev.map((a) =>
+          a.Kandydatid === app.Kandydatid && a.Ofertaid === app.Ofertaid
+            ? { ...a, status: newStatus }
+            : a
+        )
+      );
 
-
-  const handleDelete = async (Kandydatid, Ofertaid) => {
-  const confirmDelete = window.confirm("Czy na pewno chcesz usunąć tę aplikację?");
-  if (!confirmDelete) return;
-
-  try {
-    const token = localStorage.getItem("token");
-
-    await axios.delete(`http://localhost:5000/api/aplikacja/${Kandydatid}/${Ofertaid}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-
-    setApplications((prev) =>
-      prev.filter((app) => !(app.Kandydatid === Kandydatid && app.Ofertaid === Ofertaid))
-    );
-
-    alert("✅ Aplikacja została usunięta.");
-  } catch (err) {
-    console.error("❌ Błąd podczas usuwania aplikacji:", err);
-    alert("❌ Nie udało się usunąć aplikacji.");
-  }
-};
+      alert("Status aplikacji został zmieniony.");
+    } catch (err) {
+      console.error("Błąd podczas zmiany statusu:", err);
+      alert("Nie udało się zmienić statusu.");
+    }
+  };
 
   const filteredApps = applications.filter((app) => {
     const matchesSearch = app.candidate_name
       ?.toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter ? app.status === statusFilter : true;
-    const matchesPosition = positionFilter ? app.position === positionFilter : true;
-    const matchesCategory = categoryFilter ? app.category === categoryFilter : true;
+    const matchesPosition = positionFilter
+      ? app.position === positionFilter
+      : true;
+    const matchesCategory = categoryFilter
+      ? app.category === categoryFilter
+      : true;
     return matchesSearch && matchesStatus && matchesPosition && matchesCategory;
   });
 
@@ -160,14 +211,27 @@ export default function ApplicationsOverview() {
                     <tr key={app.id}>
                       <td>{app.candidate_name}</td>
                       <td>{app.position}</td>
-                      <td>{app.status}</td>
+                       <td>
+                        <select
+                          value={app.status}
+                          onChange={(e) => handleStatusChange(app, e.target.value)}
+                        >
+                          <option value="oczekujaca">Oczekująca</option>
+                          <option value="zakceptowana">Zaakceptowana</option>
+                          <option value="odrzucona">Odrzucona</option>
+                        </select>
+                      </td>
                       <td>{app.category}</td>
                       <td>
                         <button
                           className="view-btn"
-                          onClick={() => handleView(app.id)}
+                          onClick={() =>
+                            navigate(
+                              `/applicationdetails/${app.Kandydatid}/${app.Ofertaid}`
+                            )
+                          }
                         >
-                          👁️ Podgląd
+                          Podgląd
                         </button>
                         <button
                           className="edit-btn"
@@ -176,11 +240,13 @@ export default function ApplicationsOverview() {
                           Rozmowa
                         </button>
                         <button
-  className="delete-btn"
-  onClick={() => handleDelete(app.Kandydatid, app.Ofertaid)}
->
-  🗑️ Usuń
-</button>
+                          className="delete-btn"
+                          onClick={() =>
+                            handleDelete(app.Kandydatid, app.Ofertaid)
+                          }
+                        >
+                          Usuń
+                        </button>
                       </td>
                     </tr>
                   ))

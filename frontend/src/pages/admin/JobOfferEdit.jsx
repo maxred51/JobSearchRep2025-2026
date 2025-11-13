@@ -30,6 +30,7 @@ const JobOfferEdit = () => {
   const [availableLevels, setAvailableLevels] = useState([]);
   const [availableDimensions, setAvailableDimensions] = useState([]);
   const [availableContracts, setAvailableContracts] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,17 +43,19 @@ const JobOfferEdit = () => {
         const resOffer = await axios.get(`http://localhost:5000/api/oferta/${id}`, { headers });
         const d = resOffer.data;
 
-        const [modesRes, levelsRes, dimensionsRes, contractsRes] = await Promise.all([
+        const [modesRes, levelsRes, dimensionsRes, contractsRes, categoriesRes] = await Promise.all([
           axios.get("http://localhost:5000/api/tryb", { headers }),
           axios.get("http://localhost:5000/api/poziom", { headers }),
           axios.get("http://localhost:5000/api/wymiar", { headers }),
           axios.get("http://localhost:5000/api/umowa", { headers }),
+          axios.get("http://localhost:5000/api/kategoriapracy", { headers }),
         ]);
 
         setAvailableModes(modesRes.data);
         setAvailableLevels(levelsRes.data);
         setAvailableDimensions(dimensionsRes.data);
         setAvailableContracts(contractsRes.data);
+        setAvailableCategories(categoriesRes.data);
 
         const resLinks = await axios.get(`http://localhost:5000/api/oferta/${id}/powiazania`, {
           headers,
@@ -109,7 +112,7 @@ const JobOfferEdit = () => {
     }
 
     const headers = { Authorization: `Bearer ${token}` };
-    console.log("📦 Dane wysyłane do backendu:", form);
+    console.log("Dane wysyłane do backendu:", form);
 
     try {
       await axios.put(
@@ -161,10 +164,10 @@ const JobOfferEdit = () => {
       await updateLinks("oferta_wymiar", form.dimensions, "Wymiarid");
       await updateLinks("oferta_umowa", form.contracts, "Umowaid");
 
-      alert("✅ Oferta została pomyślnie zaktualizowana!");
+      alert("Oferta została pomyślnie zaktualizowana!");
       navigate("/offersadmin");
     } catch (err) {
-      console.error("❌ Błąd przy aktualizacji oferty:", err.response?.data || err);
+      console.error("Błąd przy aktualizacji oferty:", err.response?.data || err);
       alert(err.response?.data?.error || "Nie udało się zaktualizować oferty.");
     }
   };
@@ -188,47 +191,60 @@ const JobOfferEdit = () => {
               <label>Wynagrodzenie:<input type="text" name="salary" value={form.salary} onChange={handleChange} /></label>
               <label>Wymagania:<textarea name="requirements" value={form.requirements} onChange={handleChange} /></label>
               <label>Lokalizacja:<input type="text" name="location" value={form.location} onChange={handleChange} /></label>
-              <label>Czas pracy:<input type="text" name="workTime" value={form.workTime} onChange={handleChange} /></label>
-              <label>Kategoria pracy (ID):<input type="text" name="category" value={form.category} onChange={handleChange} /></label>
+              <label>Liczba godzin w tygodniu:<input type="text" name="workTime" value={form.workTime} onChange={handleChange} /></label>
+              <label>
+                  Kategoria pracy:
+                  <select
+                    name="category"
+                    value={form.category}
+                    onChange={handleChange}
+                  >
+                    <option value="">-- Wybierz kategorię --</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat.id} value={cat.KategoriaPracyid}>
+                        {cat.Nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <div className="checkbox-group">
-                <h3>Poziom stanowiska</h3>
-                {availableLevels.map((lvl) => (
-                  <label key={lvl.id}>
-                    <input type="checkbox" name="levels" value={String(lvl.id)} checked={form.levels.includes(String(lvl.id))} onChange={handleChange} />
-                    {lvl.nazwa || lvl.name}
-                  </label>
-                ))}
-              </div>
-
-              <div className="checkbox-group">
-                <h3>Wymiar pracy</h3>
-                {availableDimensions.map((dim) => (
-                  <label key={dim.id}>
-                    <input type="checkbox" name="dimensions" value={String(dim.id)} checked={form.dimensions.includes(String(dim.id))} onChange={handleChange} />
-                    {dim.nazwa || dim.name}
-                  </label>
-                ))}
-              </div>
-
-              <div className="checkbox-group">
-                <h3>Tryb pracy</h3>
-                {availableModes.map((mode) => (
-                  <label key={mode.id}>
-                    <input type="checkbox" name="modes" value={String(mode.id)} checked={form.modes.includes(String(mode.id))} onChange={handleChange} />
-                    {mode.nazwa || mode.name}
-                  </label>
-                ))}
-              </div>
-
-              <div className="checkbox-group">
-                <h3>Rodzaj umowy</h3>
-                {availableContracts.map((c) => (
-                  <label key={c.id}>
-                    <input type="checkbox" name="contracts" value={String(c.id)} checked={form.contracts.includes(String(c.id))} onChange={handleChange} />
-                    {c.nazwa || c.name}
-                  </label>
-                ))}
+              <div className="checkbox-row">
+                <div className="checkbox-group">
+                  <div className="group-title">Poziom stanowiska</div>
+                  {availableLevels.map(lvl => (
+                    <label key={lvl.id}>
+                      <input type="checkbox" name="levels" value={String(lvl.id)} checked={form.levels.includes(String(lvl.id))} onChange={handleChange}/>
+                      {lvl.nazwa || lvl.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="checkbox-group">
+                  <div className="group-title">Wymiar pracy</div>
+                  {availableDimensions.map(dim => (
+                    <label key={dim.id}>
+                      <input type="checkbox" name="dimensions" value={String(dim.id)} checked={form.dimensions.includes(String(dim.id))} onChange={handleChange}/>
+                      {dim.nazwa || dim.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="checkbox-group">
+                  <div className="group-title">Tryb pracy</div>
+                  {availableModes.map(mode => (
+                    <label key={mode.id}>
+                      <input type="checkbox" name="modes" value={String(mode.id)} checked={form.modes.includes(String(mode.id))} onChange={handleChange}/>
+                      {mode.nazwa || mode.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="checkbox-group">
+                  <div className="group-title">Umowa</div>
+                  {availableContracts.map(c => (
+                    <label key={c.id}>
+                      <input type="checkbox" name="contracts" value={String(c.id)} checked={form.contracts.includes(String(c.id))} onChange={handleChange}/>
+                      {c.nazwa || c.name}
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <label>

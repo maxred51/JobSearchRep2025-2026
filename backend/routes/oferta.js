@@ -128,7 +128,7 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role === 'administrator') {
       let query = `
-        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
+        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.id AS Firmaid, f.nazwa AS nazwa_firmy, o.KategoriaPracyid, o.aktywna, o.PracownikHRid
         FROM oferta o
         JOIN pracownikHR p ON o.PracownikHRid = p.id
         JOIN firma f ON p.Firmaid = f.id
@@ -163,7 +163,7 @@ router.get('/', authMiddleware, async (req, res) => {
       res.json(rows);
     } else {
       let query = `
-        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.nazwa AS nazwa_firmy, o.KategoriaPracyid
+        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.id AS Firmaid, f.nazwa AS nazwa_firmy, o.KategoriaPracyid, o.aktywna, o.PracownikHRid
         FROM oferta o
         JOIN pracownikHR p ON o.PracownikHRid = p.id
         JOIN firma f ON p.Firmaid = f.id
