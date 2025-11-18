@@ -172,7 +172,7 @@ router.get('/:Kandydatid/:Ofertaid', authMiddleware, async (req, res) => {
 
 // Interfejs PracownikHR (zakładka "Kandydaci")
 // READ - Pobieranie listy kandydatów, którzy aplikowali na oferty pracownika HR (zabezpieczone)
-router.get('/pracownikHR/:PracownikHRid', authMiddleware, async (req, res) => {
+router.get('/pracownikHR/HR/:PracownikHRid', authMiddleware, async (req, res) => {
   const { PracownikHRid } = req.params;
   const { sortBy, sortOrder, status, kategoria } = req.query;
   // Walidacja ID

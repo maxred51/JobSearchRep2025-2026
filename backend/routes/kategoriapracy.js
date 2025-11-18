@@ -24,13 +24,6 @@ router.post('/', authMiddleware, async (req, res) => {
       [Nazwa.trim(), KategoriaPracyid || null]
     );
 
-    // Sprawdzenie cykli w hierarchii
-    if (KategoriaPracyid && parseInt(KategoriaPracyid) === result.insertId) {
-      // Cofnięcie wstawienia w przypadku cyklu
-      await pool.query('DELETE FROM kategoriapracy WHERE id = ?', [result.insertId]);
-      return res.status(400).json({ error: 'Kategoria nadrzędna nie może być taka sama jak tworzona kategoria' });
-    }
-
     res.status(201).json({ id: result.insertId, Nazwa: Nazwa.trim(), KategoriaPracyid });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {

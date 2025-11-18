@@ -117,7 +117,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // UPDATE - Aktualizacja pracownika HR (zabezpieczone)
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { imie, nazwisko, telefon, email, haslo, plec, Firmaid } = req.body;
+  const { imie, nazwisko, telefon, email, plec, Firmaid } = req.body;
   if (req.user.role !== 'administrator' && (req.user.role !== 'pracownikHR' || req.user.id !== parseInt(id))) {
     return res.status(403).json({ error: 'Brak uprawnień do edycji tego konta' });
   }
@@ -146,11 +146,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     let query = 'UPDATE pracownikHR SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?, Firmaid = ?';
     const params = [imie, nazwisko, telefon, email, plec, Firmaid];
-    if (haslo) {
-      const hashedPassword = await bcrypt.hash(haslo, 10);
-      query += ', haslo = ?';
-      params.push(hashedPassword);
-    }
+    
     query += ' WHERE id = ?';
     params.push(id);
     const [result] = await pool.query(query, params);
