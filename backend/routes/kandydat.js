@@ -302,4 +302,29 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Oferty od obserwowanych firm dla kandydata
+router.get('/kandydat/:id/obserwowane-oferty', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  if (req.user.role !== 'kandydat' || req.user.id != id) {
+    return res.status(403).json({ error: 'Brak dostępu' });
+  }
+
+  try {
+    const [rows] = await pool.query(`
+      SELECT oferta.id, oferta.tytul, oferta.dataDodania, firma.nazwa
+      FROM obserwowane_firmy
+      JOIN oferta ON oferta.FirmaId = obserwowane_firmy.FirmaId
+      JOIN firma ON firma.id = oferta.FirmaId
+      WHERE obserwowane_firmy.KandydatId = ?
+      ORDER BY oferta.dataDodania DESC;
+    `, [id]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+
 module.exports = router;

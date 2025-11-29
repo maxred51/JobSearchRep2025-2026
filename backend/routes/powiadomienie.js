@@ -41,6 +41,29 @@ router.get('/kandydat/:kandydatId', authMiddleware, async (req, res) => {
   }
 });
 
+// Pobieranie powiadomień od obserwowanych firm
+router.get('/kandydat/:kandydatId/observed-offers', authMiddleware, async (req, res) => {
+  const { kandydatId } = req.params;
+  if (!kandydatId) return res.status(400).json({ error: "Brak kandydatId" });
+
+  try {
+    const [offers] = await pool.query(`
+      SELECT o.id AS Ofertaid, o.tytul, o.opis, f.nazwa AS nazwa_firmy, o.data
+      FROM oferta o
+      JOIN pracownikHR p ON p.id = o.pracownikHRid
+      JOIN firma f ON f.id = p.Firmaid
+      JOIN obserwowana_firma ofr ON ofr.Firmaid = f.id
+      WHERE ofr.Kandydatid = ?
+      ORDER BY o.data DESC
+    `, [kandydatId]);
+
+    res.json(offers);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+});
+
 // Oznaczenie powiadomienia jako przeczytane
 router.put('/:id/przeczytane', authMiddleware, async (req, res) => {
   const { id } = req.params;

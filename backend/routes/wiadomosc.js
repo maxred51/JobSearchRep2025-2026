@@ -33,12 +33,14 @@ router.get('/konwersacja/:rola/:id', authMiddleware, async (req, res) => {
 
     // Pobieranie wiadomości
     const [rows] = await pool.query(
-      `SELECT id, tresc, przeczytane, data FROM wiadomosc
-       WHERE (nadawca_id=? AND nadawca_typ=? AND odbiorca_id=? AND odbiorca_typ=?)
-          OR (nadawca_id=? AND nadawca_typ=? AND odbiorca_id=? AND odbiorca_typ=?)
-       ORDER BY data ASC`,
-      [user.id, user.role, id, rola, id, rola, user.id, user.role]
-    );
+  `SELECT id, nadawca_id, nadawca_typ, odbiorca_id, odbiorca_typ, tresc, przeczytane, data
+   FROM wiadomosc
+   WHERE (nadawca_id=? AND nadawca_typ=? AND odbiorca_id=? AND odbiorca_typ=?)
+      OR (nadawca_id=? AND nadawca_typ=? AND odbiorca_id=? AND odbiorca_typ=?)
+   ORDER BY data ASC`,
+  [user.id, user.role, id, rola, id, rola, user.id, user.role]
+);
+
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Błąd serwera' });
@@ -48,15 +50,18 @@ router.get('/konwersacja/:rola/:id', authMiddleware, async (req, res) => {
 // lista konwersacji (ostatnia wiadomość z każdym rozmówcą)
 router.get('/lista', authMiddleware, async (req, res) => {
   const { id, role } = req.user;
-
-  // Walidacja roli użytkownika
-  if (!['kandydat', 'pracownikHR', 'administrator'].includes(role)) {
-    return res.status(400).json({ error: 'Nieprawidłowa rola użytkownika' });
-  }
-
   try {
     const [rows] = await pool.query(
-      `SELECT w.id, w.tresc, w.przeczytane, w.data
+      `SELECT
+         CASE
+           WHEN w.nadawca_id = ? AND w.nadawca_typ = ? THEN w.odbiorca_id
+           ELSE w.nadawca_id
+         END AS rozmowca_id,
+         CASE
+           WHEN w.nadawca_id = ? AND w.nadawca_typ = ? THEN w.odbiorca_typ
+           ELSE w.nadawca_typ
+         END AS rozmowca_typ,
+         w.tresc, w.przeczytane, w.data
        FROM wiadomosc w
        JOIN (
          SELECT LEAST(nadawca_id, odbiorca_id, nadawca_typ, odbiorca_typ) as key1,
@@ -70,13 +75,14 @@ router.get('/lista', authMiddleware, async (req, res) => {
            AND GREATEST(w.nadawca_id, w.odbiorca_id, w.nadawca_typ, w.odbiorca_typ) = t.key2
            AND w.data = t.max_date)
        ORDER BY w.data DESC`,
-      [id, role, id, role]
+      [id, role, id, role, id, role, id, role]
     );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
 
 
 
