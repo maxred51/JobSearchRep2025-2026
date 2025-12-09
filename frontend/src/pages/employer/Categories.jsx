@@ -18,9 +18,12 @@ export default function Categories() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get("http://localhost:5000/api/kategoriakandydata", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        "http://localhost:5000/api/kategoriakandydata",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setCategories(res.data);
     } catch (err) {
       console.error("Błąd pobierania kategorii:", err.response?.data || err);
@@ -54,7 +57,10 @@ export default function Categories() {
       setShowAddForm(false);
       fetchCategories();
     } catch (err) {
-      console.error("Błąd przy dodawaniu kategorii:", err.response?.data || err);
+      console.error(
+        "Błąd przy dodawaniu kategorii:",
+        err.response?.data || err
+      );
       alert(err.response?.data?.error || "Nie udało się dodać kategorii.");
     }
   };
@@ -80,7 +86,9 @@ export default function Categories() {
       fetchCategories();
     } catch (err) {
       console.error("Błąd przy edycji:", err.response?.data || err);
-      alert(err.response?.data?.error || "Nie udało się zaktualizować kategorii.");
+      alert(
+        err.response?.data?.error || "Nie udało się zaktualizować kategorii."
+      );
     }
   };
 
@@ -131,44 +139,63 @@ export default function Categories() {
             </div>
 
             {showAddForm && (
-              <form className="add-category-form" onSubmit={handleAddCategory}>
-                <input
-                  type="text"
-                  placeholder="Nazwa nowej kategorii"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  required
-                />
-                <button type="submit" className="save-btn">💾 Zapisz</button>
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Anuluj
-                </button>
-              </form>
+              <div className="category-form-wrapper">
+                <form className="category-form" onSubmit={handleAddCategory}>
+                  <h3>Dodaj nową kategorię</h3>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Nazwa nowej kategorii"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    required
+                  />
+                  <div className="form-buttons">
+                    <button type="submit" className="save-btn">
+                      Zapisz
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => setShowAddForm(false)}
+                    >
+                      Anuluj
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {showEditForm && (
-              <form className="edit-category-form" onSubmit={handleEditCategory}>
-                <input
-                  type="text"
-                  value={editCategory.nazwa}
-                  onChange={(e) =>
-                    setEditCategory({ ...editCategory, nazwa: e.target.value })
-                  }
-                  required
-                />
-                <button type="submit" className="save-btn">💾 Zapisz zmiany</button>
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowEditForm(false)}
-                >
-                  Anuluj
-                </button>
-              </form>
+              <div className="category-form-wrapper">
+                <form className="category-form" onSubmit={handleEditCategory}>
+                  <h3>Edytuj kategorię</h3>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editCategory.nazwa}
+                    onChange={(e) =>
+                      setEditCategory({
+                        ...editCategory,
+                        nazwa: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                  <div className="form-buttons">
+                    <button type="submit" className="save-btn">
+                      Zapisz zmiany
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => setShowEditForm(false)}
+                    >
+                      Anuluj
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             <table className="categories-table">

@@ -70,3 +70,48 @@
   color: #555;
   font-size: 0.95rem;
 }
+
+.btn-unfollow,
+.btn-cancel {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-unfollow {
+  background-color: #ff4d4d;
+  color: white;
+}
+
+.btn-unfollow:hover {
+  background-color: #e60000;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(255, 0, 0, 0.3);
+}
+
+.btn-cancel {
+  background-color: #ffa31a;
+  color: #222;
+  margin: 10px; 
+}
+
+.btn-cancel:hover {
+  background-color: #ff8c00;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(255, 140, 0, 0.3);
+}
+
+.offer-link {
+  color: #007bff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.offer-link:hover {
+  text-decoration: underline;
+}
+

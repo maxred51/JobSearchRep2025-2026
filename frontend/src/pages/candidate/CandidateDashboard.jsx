@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import "../../styles/candidate/CandidateDashboard.css";
 import CandidateSidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -9,6 +10,7 @@ export default function CandidateDashboard() {
   const [filteredOffers, setFilteredOffers] = useState([]);
   const [savedOffersIds, setSavedOffersIds] = useState([]);
   const [observedCompaniesIds, setObservedCompaniesIds] = useState([]);
+  const [clickedOffersIds, setClickedOffersIds] = useState([]); 
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
@@ -88,27 +90,24 @@ export default function CandidateDashboard() {
   };
 
   const handleObserveCompany = async (companyId) => {
-  if (!companyId) {
-    console.warn("Brak ID firmy – nie można dodać do obserwowanych.");
-    return;
-  }
+    if (!companyId) return;
 
-  try {
-    const token = localStorage.getItem("token");
-    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
 
-    if (observedCompaniesIds.includes(companyId)) {
-      await axios.delete(`http://localhost:5000/api/obserwowana_firma/${companyId}`, { headers });
-      setObservedCompaniesIds((prev) => prev.filter((id) => id !== companyId));
-    } else {
-      await axios.post("http://localhost:5000/api/obserwowana_firma", { Firmaid: companyId }, { headers });
-      setObservedCompaniesIds((prev) => [...prev, companyId]);
+      if (observedCompaniesIds.includes(companyId)) {
+        await axios.delete(`http://localhost:5000/api/obserwowana_firma/${companyId}`, { headers });
+        setObservedCompaniesIds((prev) => prev.filter((id) => id !== companyId));
+      } else {
+        await axios.post("http://localhost:5000/api/obserwowana_firma", { Firmaid: companyId }, { headers });
+        setObservedCompaniesIds((prev) => [...prev, companyId]);
+      }
+    } catch (error) {
+      console.error("Błąd przy obserwowaniu firmy:", error);
+      alert("Nie udało się dodać firmy do obserwowanych.");
     }
-  } catch (error) {
-    console.error("Błąd przy obserwowaniu firmy:", error);
-    alert("Nie udało się dodać firmy do obserwowanych.");
-  }
-};
+  };
 
   const handleSearch = () => {
     const filtered = offers.filter((offer) => {
@@ -128,26 +127,8 @@ export default function CandidateDashboard() {
   const getOfferKey = (offer, index) => offer.id ?? offer.ID ?? offer._id ?? `${(offer.tytul ?? offer.title ?? "offer")}-${index}`;
   const getOfferTitle = (offer) => offer.tytul ?? offer.title ?? offer.nazwa ?? offer.name ?? "Brak tytułu";
   const getOfferLocation = (offer) => offer.lokalizacja ?? offer.location ?? "";
- const getCompanyId = (offer) => {
-  return (
-    offer.Firmaid ??
-    offer.firmaid ??
-    offer.companyId ??
-    offer.company?.id ??
-    offer.firma?.id ??
-    null
-  );
-};
-  const getCompanyName = (offer) => {
-  return (
-    offer.nazwa_firmy ??
-    offer.firma ??
-    offer.company ??
-    offer.companyName ??
-    offer.company?.nazwa_firmy ??
-    "Nieznana firma"
-  );
-};
+  const getCompanyId = (offer) => offer.Firmaid ?? offer.firmaid ?? offer.companyId ?? offer.company?.id ?? offer.firma?.id ?? null;
+  const getCompanyName = (offer) => offer.nazwa_firmy ?? offer.firma ?? offer.company ?? offer.companyName ?? offer.company?.nazwa_firmy ?? "Nieznana firma";
 
   if (loading) return <p>Ładowanie danych...</p>;
 
@@ -180,52 +161,59 @@ export default function CandidateDashboard() {
                 const companyId = getCompanyId(offer);
 
                 return (
-  <div className="offer" key={key}>
-    <span className="offer-title">
-      {title}
-      {companyName && (
-        <>
-          {" – "}
-          <span
-            className="company-name"
-            onClick={() => handleObserveCompany(companyId)}
-            style={{
-              cursor: "pointer",
-              color: observedCompaniesIds.includes(companyId) ? "#f1c40f" : "#3498db",
-              fontWeight: observedCompaniesIds.includes(companyId) ? "bold" : "normal",
-              transition: "color 0.3s ease",
-            }}
-            title={
-              observedCompaniesIds.includes(companyId)
-                ? "Kliknij, aby przestać obserwować firmę"
-                : "Kliknij, aby obserwować firmę"
-            }
-          >
-            {companyName}
-          </span>
-        </>
-      )}
-      {loc && ` (${loc})`}
-    </span>
+                  <div className="offer" key={key}>
+                    <span className="offer-title">
+                      {title}
+                      {companyName && (
+                        <>
+                          {" – "}
+                          <span
+                            className="company-name"
+                            onClick={() => handleObserveCompany(companyId)}
+                            style={{
+                              cursor: "pointer",
+                              color: observedCompaniesIds.includes(companyId) ? "#f1c40f" : "#3498db",
+                              fontWeight: observedCompaniesIds.includes(companyId) ? "bold" : "normal",
+                              transition: "color 0.3s ease",
+                            }}
+                            title={
+                              observedCompaniesIds.includes(companyId)
+                                ? "Kliknij, aby przestać obserwować firmę"
+                                : "Kliknij, aby obserwować firmę"
+                            }
+                          >
+                            {companyName}
+                          </span>
+                        </>
+                      )}
+                      {loc && ` (${loc})`}
+                    </span>
 
-    <div className="offer-actions">
-      <span
-        className="star"
-        style={{ cursor: "pointer" }}
-        onClick={() => handleSaveOffer(offer.id)}
-      >
-        {savedOffersIds.includes(offer.id) ? "★" : "☆"}
-      </span>
-      <a
-        href={`/offerpreview/${offer.id ?? key}`}
-        className="apply-link"
-      >
-        Aplikuj
-      </a>
-    </div>
-  </div>
-);
+                    <div className="offer-actions">
+                      <span
+                        className="star"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleSaveOffer(offer.id)}
+                      >
+                        {savedOffersIds.includes(offer.id) ? "★" : "☆"}
+                      </span>
 
+                      {clickedOffersIds.includes(offer.id) ? (
+                        <span className="applied-label" style={{ color: "green", fontWeight: "bold" }}>
+                          Zaaplikowane
+                        </span>
+                      ) : (
+                        <Link
+                          to={`/offerpreview/${offer.id ?? key}`}
+                          className="apply-link"
+                          onClick={() => setClickedOffersIds((prev) => [...prev, offer.id])}
+                        >
+                          Aplikuj
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
               }) : <p>Brak ofert do wyświetlenia.</p>}
             </div>
           </section>

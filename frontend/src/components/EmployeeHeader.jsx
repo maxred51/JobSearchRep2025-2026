@@ -5,7 +5,7 @@ import "../styles/Header.css";
 export default function Header() {
   return (
     <header className="dashboard-header">
-      <div className="logo">Logo firmy</div>
+      <div className="logo"></div>
       <div className="header-right">
         <button className="font-btn">A+</button>
         <button className="font-btn">A-</button>

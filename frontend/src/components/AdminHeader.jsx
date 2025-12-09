@@ -5,7 +5,7 @@ import "../styles/components/AdminHeader.css";
 export default function AdminHeader() {
   return (
     <header className="admin-header">
-      <div className="logo">Logo firmy</div>
+      <div className="logo"></div>
       <div className="admin-header-right">
         <div className="font-controls">
           <button className="font-btn">A+</button>

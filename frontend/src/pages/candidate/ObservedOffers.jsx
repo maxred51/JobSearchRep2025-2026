@@ -84,7 +84,7 @@ function ObservedOffers() {
                   <div className="company-header">
                     <strong>{company.nazwa_firmy}</strong>
                     <button
-                      className="unfollow"
+                      className="btn-unfollow"
                       onClick={() => handleUnfollow(company.id)}
                     >
                       Nie obserwuj
@@ -119,7 +119,7 @@ function ObservedOffers() {
                       {offer.tytul}
                     </strong>
                     <button
-                      className="cancel"
+                      className="btn-cancel"
                       onClick={() => handleCancelOffer(offer.id)}
                     >
                       Anuluj

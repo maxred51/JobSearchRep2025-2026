@@ -35,7 +35,6 @@
 .offer-block b {
   display: block;
   margin-bottom: 8px;
-  color: #34495e;
 }
 
 .offer-block ul {
@@ -82,7 +81,6 @@
 }
 
 .back-link {
-  background-color: #ecf0f1;
   color: #2c3e50;
 }
 
@@ -98,3 +96,4 @@
 .apply-link:hover {
   background-color: #2980b9;
 }
+

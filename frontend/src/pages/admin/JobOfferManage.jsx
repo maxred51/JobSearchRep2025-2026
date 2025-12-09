@@ -124,7 +124,7 @@ const JobOfferManage = () => {
               <Link to={`/offeredit/${offer.id}`} className="btn-manage">
                 Edytuj ofertę
               </Link>
-              <Link to={`/communicationview/${offer.id}`} className="btn-message">
+              <Link to={`/communicationview/pracownikHR/${offer.id}`} className="btn-message">
                 Wyślij wiadomość
               </Link>
               <button

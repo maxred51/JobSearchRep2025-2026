@@ -23,6 +23,7 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("userId", user.id);
       localStorage.setItem("rola", rola);
+      
 
       switch (rola) {
         case "kandydat":

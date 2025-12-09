@@ -129,7 +129,7 @@ export default function EmployeeDashboard() {
       <EmployeeHeader />
 
       <div className="employee-dashboard-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="offers"/>
 
         <main className="employee-dashboard-main">
           <section className="content-section">

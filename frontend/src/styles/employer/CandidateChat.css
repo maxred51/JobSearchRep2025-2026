@@ -70,13 +70,16 @@
 
 .chat-message {
   display: flex;
+  margin: 5px 0;
 }
 
-.chat-message.from-candidate {
+/* HR po lewej */
+.chat-message.from-employee {
   justify-content: flex-start;
 }
 
-.chat-message.from-employee {
+/* Kandydat po prawej */
+.chat-message.from-candidate {
   justify-content: flex-end;
 }
 
@@ -89,15 +92,17 @@
   line-height: 1.4;
 }
 
-.from-candidate .chat-bubble {
-  background-color: #e4e6eb;
-  color: #000;
+/* HR kolor niebieski */
+.chat-message.from-employee .chat-bubble {
+  background-color: #007bff;
+  color: white;
   border-top-left-radius: 0;
 }
 
-.from-employee .chat-bubble {
-  background-color: #007bff;
-  color: white;
+/* Kandydat kolor szary */
+.chat-message.from-candidate .chat-bubble {
+  background-color: #e4e6eb;
+  color: #000;
   border-top-right-radius: 0;
 }
 

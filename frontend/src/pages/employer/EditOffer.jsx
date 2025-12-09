@@ -85,18 +85,24 @@ export default function EditOffer() {
   }, [id]);
 
   const handleChange = (e) => {
-    const { name, type, value } = e.target;
-    if (type === "checkbox") {
-      setForm((prev) => {
-        const arr = prev[name].includes(value)
-          ? prev[name].filter((x) => x !== value)
-          : [...prev[name], value];
-        return { ...prev, [name]: arr };
-      });
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
-  };
+  const { name, type, value, checked } = e.target;
+
+  if (["modes", "levels", "dimensions", "contracts"].includes(name)) {
+    setForm((prev) => {
+      const arr = prev[name].includes(value)
+        ? prev[name].filter((x) => x !== value)
+        : [...prev[name], value];
+      return { ...prev, [name]: arr };
+    });
+  } 
+  else if (type === "checkbox") {
+    setForm((prev) => ({ ...prev, [name]: checked }));
+  } 
+  else {
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -120,7 +126,7 @@ export default function EditOffer() {
           wymagania: form.requirements,
           lokalizacja: form.location,
           czas: parseInt(form.workTime),
-          aktywna: form.active,
+          aktywna: form.active ? 1 : 0, 
           KategoriaPracyid: form.category ? parseInt(form.category) : null,
         },
         { headers }
@@ -166,8 +172,6 @@ export default function EditOffer() {
       alert(err.response?.data?.error || "Nie udało się zaktualizować oferty.");
     }
   };
-
-
 
   if (loading) return <p>Ładowanie opcji...</p>;
 
