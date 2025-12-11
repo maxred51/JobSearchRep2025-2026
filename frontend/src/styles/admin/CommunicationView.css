@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .communication-layout {
   display: flex;
   flex-direction: column;
@@ -55,3 +56,62 @@
   background: #e8f8f0;
   align-self: flex-end;
 }
+=======
+.communication-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.communication-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.communication-main {
+  flex: 1;
+  padding: 20px;
+  background: #ecf0f1;
+  overflow-y: auto;
+}
+
+.communication-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.conversation-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.message.admin {
+  background: #f0f4f8;
+  align-self: flex-start;
+}
+
+.message.worker {
+  background: #e8f8f0;
+  align-self: flex-end;
+}
+>>>>>>> def9ccd (Poprawki)

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 .employee-dashboard-page {
   display: flex;
@@ -97,3 +98,104 @@
   background-color: #fee2e2;
 }
 
+=======
+
+.employee-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.employee-dashboard-content {
+  display: flex;
+  flex: 1;
+  background-color: #f8fafc;
+}
+
+.employee-dashboard-content .employee-sidebar {
+  flex-shrink: 0;
+}
+
+.employee-dashboard-main {
+  flex: 1;
+  padding: 30px 40px;
+  overflow-y: auto;
+}
+
+.content-section h2 {
+  margin-bottom: 15px;
+  color: #1e293b;
+}
+
+.offers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.search-input {
+  padding: 8px 10px;
+  width: 220px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.add-offer-btn {
+  background-color: #4a57d2;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.add-offer-btn:hover {
+  background-color: #3b47b0;
+}
+
+.offers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.offers-table th,
+.offers-table td {
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  text-align: center;
+}
+
+.offers-table th {
+  background-color: #f1f5f9;
+  color: #334155;
+  font-weight: 600;
+}
+
+.manage-btn,
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: 0.2s;
+}
+
+.manage-btn:hover {
+  background-color: #e0e7ff;
+}
+
+.delete-btn:hover {
+  background-color: #fee2e2;
+}
+
+>>>>>>> def9ccd (Poprawki)

@@ -45,14 +45,24 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT f.id, f.nazwa AS nazwa_firmy ' +
+<<<<<<< HEAD
       'FROM obserwowana_firma of ' +
       'JOIN firma f ON of.Firmaid = f.id ' +
       'WHERE of.Kandydatid = ?',
+=======
+      'FROM obserwowana_firma obf ' +
+      'JOIN firma f ON obf.Firmaid = f.id ' +
+      'WHERE obf.Kandydatid = ?',
+>>>>>>> def9ccd (Poprawki)
       [req.user.id]
     );
     res.json(rows);
   } catch (error) {
+<<<<<<< HEAD
     res.status(500).json({ error: 'Błąd serwera' });
+=======
+    res.status(500).json({ error: error.sqlMessage || error.message });
+>>>>>>> def9ccd (Poprawki)
   }
 });
 

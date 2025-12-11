@@ -6,6 +6,10 @@ const authMiddleware = require('../middlewares/auth');
 // Interfejs PracownikHR (zakładka "Moje oferty")
 // CREATE - Dodanie nowej oferty
 router.post('/', authMiddleware, async (req, res) => {
+<<<<<<< HEAD
+=======
+  console.log("BODY:", req.body);
+>>>>>>> def9ccd (Poprawki)
   if (req.user.role !== 'pracownikHR') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }

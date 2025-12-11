@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 .employee-layout {
   display: flex;
@@ -96,3 +97,103 @@
   transform: scale(1.1);
 }
 
+=======
+
+.employee-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+
+.dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+
+.employee-content {
+  display: flex;
+  flex: 1;
+  background-color: #f8f9fc;
+  min-height: calc(100vh - 60px);
+}
+
+
+.employee-content > :first-child {
+  width: 250px;
+  flex-shrink: 0;
+}
+
+.employee-main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.candidates-section h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #1e293b;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.filters input,
+.filters select {
+  padding: 6px 10px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  background: #fafafa;
+  font-size: 14px;
+}
+
+.candidates-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.candidates-table th,
+.candidates-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.candidates-table th {
+  background-color: #e5e7eb;
+  font-weight: 600;
+  color: #334155;
+}
+
+.candidates-table tr:hover {
+  background-color: #f1f5ff;
+}
+
+.options {
+  display: flex;
+  gap: 10px;
+}
+
+.icon {
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.icon:hover {
+  color: #4a57d2;
+  transform: scale(1.1);
+}
+
+>>>>>>> def9ccd (Poprawki)

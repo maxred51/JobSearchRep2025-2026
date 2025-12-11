@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .container {
   display: flex;
   font-family: Arial, sans-serif;
@@ -95,3 +96,102 @@
   margin-top: 10px;
 }
 
+=======
+.container {
+  display: flex;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 200px;
+  background: #f8f8f8;
+  padding: 20px;
+  border-right: 1px solid #ddd;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.sidebar li.active {
+  font-weight: bold;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+}
+
+.stats-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.stats-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.stats-main {
+  flex: 1;
+  padding: 20px;
+  background-color: #f4f6f8;
+  overflow-y: auto;
+}
+
+.stats-section {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 120px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.chart div {
+  width: 16%;
+  background: #4a90e2;
+  border-radius: 4px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-top: 10px;
+}
+
+>>>>>>> def9ccd (Poprawki)

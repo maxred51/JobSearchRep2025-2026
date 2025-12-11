@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .applications-overview-page {
   display: flex;
   flex-direction: column;
@@ -104,3 +105,111 @@
 .delete-btn:hover {
   background: #c82333;
 }
+=======
+.applications-overview-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.applications-overview-content {
+  display: flex;
+  flex: 1;
+}
+
+.applications-overview-main {
+  flex: 1;
+  padding: 20px;
+  background: #fafafa;
+}
+
+.content-section {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.content-section h2 {
+  margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.applications-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.filter-select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.applications-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.applications-table th,
+.applications-table td {
+  padding: 12px;
+  border: 1px solid #eee;
+  text-align: left;
+}
+
+.applications-table th {
+  background: #f0f0f0;
+  font-weight: bold;
+}
+
+.view-btn,
+.edit-btn,
+.delete-btn {
+  padding: 6px 10px;
+  margin-right: 6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.view-btn {
+  background: #007bff;
+  color: white;
+}
+
+.edit-btn {
+  background: #ffc107;
+  color: black;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.view-btn:hover {
+  background: #0069d9;
+}
+.edit-btn:hover {
+  background: #e0a800;
+}
+.delete-btn:hover {
+  background: #c82333;
+}
+>>>>>>> def9ccd (Poprawki)
