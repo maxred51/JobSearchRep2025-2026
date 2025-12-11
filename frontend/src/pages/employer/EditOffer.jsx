@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "../../styles/employer/editOffer.css";
+import "../../styles/employer/EditOffer.css";
 import Header from "../../components/Header";
 import { useParams } from "react-router-dom";
 import EmployeeSidebar from "../../components/EmployeeSidebar";

@@ -3,8 +3,10 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
 const config = require('./config/jwt');
 const pool = require('./config/db');
+const path = require('path');
 
 // Routers
 const administratorRouter = require('./routes/administrator');
@@ -46,6 +48,7 @@ app.set("io", io);
 // Middleware globalne
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'public')));
 
 // Rejestracja routerów
 app.use('/api/administrator', administratorRouter);

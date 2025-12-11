@@ -24,7 +24,21 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
   }
   try {
-    const [existing] = await pool.query('SELECT * FROM administrator WHERE email = ?', [email]);
+
+    const [existing] = await pool.query(
+      `
+      SELECT email FROM (
+        SELECT email FROM administrator
+        UNION ALL
+        SELECT email FROM kandydat
+        UNION ALL
+        SELECT email FROM pracownikHR
+      ) AS all_users
+      WHERE email = ?
+      `,
+      [email]
+    );
+
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Email już istnieje' });
     }
@@ -113,7 +127,21 @@ router.put('/:id', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowy format emaila' });
   }
   try {
-    const [existing] = await pool.query('SELECT * FROM administrator WHERE email = ? AND id != ?', [email, id]);
+
+    const [existing] = await pool.query(
+      `
+      SELECT email FROM (
+        SELECT email, id, 'admin' AS role FROM administrator
+        UNION ALL
+        SELECT email, id, 'kandydat' FROM kandydat
+        UNION ALL
+        SELECT email, id, 'pracownikHR' FROM pracownikHR
+      ) AS all_users
+      WHERE email = ? AND NOT (role = 'admin' AND id = ?)
+      `,
+      [email, id]
+    );
+
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Email już istnieje' });
     }

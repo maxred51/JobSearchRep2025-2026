@@ -52,6 +52,18 @@ router.post('/', authMiddleware, async (req, res) => {
         [Kandydatid, oferta[0].Firmaid, '']
       );
     }
+
+    // POWIADOMIENIE SYSTEMOWE DLA ADMINISTRATORÓW
+    const trescAdmin = `Nowa aplikacja: ${oferta.kandydatImie} ${oferta.kandydatNazwisko} ` +
+                       `aplikował/a na ofertę "${oferta.tytul}" (ID: ${Ofertaid}) ` +
+                       `w firmie ${oferta.firma} (HR: ${oferta.hrImie} ${oferta.hrNazwisko})`;
+
+    await pool.query(
+      `INSERT INTO powiadomienie (typ, tresc, Kandydatid, Ofertaid)
+       VALUES ('system', ?, ?, ?)`,
+      [trescAdmin, Kandydatid, Ofertaid]
+    );
+
     res.status(201).json({ Kandydatid, Ofertaid, status: "oczekujaca", kwota, odpowiedz });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {

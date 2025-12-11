@@ -61,9 +61,39 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowy format telefonu' });
   }
   try {
-    const [existing] = await pool.query('SELECT * FROM kandydat WHERE email = ? OR telefon = ?', [email, telefon]);
-    if (existing.length > 0) {
-      return res.status(400).json({ error: 'Email lub telefon już istnieje' });
+
+    const [emailExists] = await pool.query(
+      `
+      SELECT email FROM (
+        SELECT email FROM administrator
+        UNION ALL
+        SELECT email FROM kandydat
+        UNION ALL
+        SELECT email FROM pracownikHR
+      ) AS all_users
+      WHERE email = ?
+      `,
+      [email]
+    );
+
+    if (emailExists.length > 0) {
+      return res.status(400).json({ error: 'Email już istnieje' });
+    }
+
+    const [phoneExists] = await pool.query(
+      `
+      SELECT telefon FROM (
+        SELECT telefon FROM kandydat
+        UNION ALL
+        SELECT telefon FROM pracownikHR
+      ) AS all_phones
+      WHERE telefon = ?
+      `,
+      [telefon]
+    );
+
+    if (phoneExists.length > 0) {
+      return res.status(400).json({ error: 'Telefon już istnieje' });
     }
 
     const hashedPassword = await bcrypt.hash(haslo, 10);
@@ -266,10 +296,43 @@ router.put('/:id', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowy format telefonu' });
   }
   try {
-    const [existing] = await pool.query('SELECT * FROM kandydat WHERE (email = ? OR telefon = ?) AND id != ?', [email, telefon, id]);
-    if (existing.length > 0) {
-      return res.status(400).json({ error: 'Email lub telefon już istnieje' });
+
+
+    const [emailExists] = await pool.query(
+      `
+      SELECT * FROM (
+        SELECT id, email, 'kandydat' AS role FROM kandydat
+        UNION ALL
+        SELECT id, email, 'pracownikHR' FROM pracownikHR
+        UNION ALL
+        SELECT id, email, 'administrator' FROM administrator
+      ) AS all_users
+      WHERE email = ? AND NOT (role = 'kandydat' AND id = ?)
+      `,
+      [email, id]
+    );
+
+    if (emailExists.length > 0) {
+      return res.status(400).json({ error: 'Email już istnieje' });
     }
+
+    const [phoneExists] = await pool.query(
+      `
+      SELECT * FROM (
+        SELECT id, telefon, 'kandydat' AS role FROM kandydat
+        UNION ALL
+        SELECT id, telefon, 'pracownikHR' FROM pracownikHR
+      ) AS all_phones
+      WHERE telefon = ? AND NOT (role = 'kandydat' AND id = ?)
+      `,
+      [telefon, id]
+    );
+
+    if (phoneExists.length > 0) {
+      return res.status(400).json({ error: 'Telefon już istnieje' });
+    }
+
+
     let query = 'UPDATE kandydat SET imie = ?, nazwisko = ?, telefon = ?, email = ?, plec = ?, cv_path = ?';
     const params = [imie, nazwisko, telefon, email, plec, cv_path || null];
     

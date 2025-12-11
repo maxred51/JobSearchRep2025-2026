@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "../../styles/candidate/candidateApplications.css";
+import "../../styles/candidate/CandidateApplications.css";
 import Header from "../../components/Header";
 import CandidateSidebar from "../../components/Sidebar";
 
