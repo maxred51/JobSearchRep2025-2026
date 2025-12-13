@@ -1,0 +1,99 @@
+
+.dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f6fa;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.dashboard-content {
+  display: flex;
+  flex: 1;
+}
+
+.offer-section {
+  flex: 1;
+  padding: 30px 40px;
+  background-color: #ffffff;
+  margin: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+}
+
+.offer-section h2.offer-title {
+  font-size: 1.8rem;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.offer-block {
+  margin-bottom: 20px;
+}
+
+.offer-block b {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.offer-block ul {
+  list-style: none;
+  padding: 0;
+}
+
+.offer-block li {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offer-block input[type="checkbox"] {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.offer-footer {
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.offer-image {
+  width: 140px;
+  height: auto;
+  border-radius: 10px;
+}
+
+.offer-links {
+  display: flex;
+  gap: 15px;
+}
+
+.offer-links a {
+  text-decoration: none;
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: 8px;
+  transition: 0.2s ease;
+}
+
+.back-link {
+  color: #2c3e50;
+}
+
+.back-link:hover {
+  background-color: #dcdde1;
+}
+
+.apply-link {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.apply-link:hover {
+  background-color: #2980b9;
+}
+

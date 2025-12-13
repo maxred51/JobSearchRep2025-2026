@@ -1,0 +1,97 @@
+
+.job-edit-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e2a38;
+  color: white;
+  padding: 10px 20px;
+  height: 60px;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+
+.job-edit-body {
+  display: flex;
+  flex: 1;
+  background: #f7f8fa;
+}
+
+
+
+.offer-edit-main {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+
+.offer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.offer-form input,
+.offer-form textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.btn-submit {
+  background-color: #0077ff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-submit:hover {
+  background-color: #005fcc;
+}
+
+
+.checkbox-group {
+  margin-bottom: 15px;
+}
+
+.checkbox-group label {
+  display: flex;
+  margin: 20px;
+  align-items: center;
+  gap: 8px; 
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin: 0;
+  position: relative;
+  top: 0; 
+}
+

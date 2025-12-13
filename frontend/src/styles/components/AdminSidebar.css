@@ -1,0 +1,36 @@
+.sidebar {
+  width: 200px;
+  min-height: 100vh;
+  background: #f8f8f8;
+  padding: 20px;
+  border-right: 1px solid #ddd;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+.sidebar nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar nav li {
+  margin-bottom: 15px;
+}
+
+.sidebar nav a {
+  text-decoration: none;
+  color: #333;
+  font-size: 15px;
+  transition: color 0.3s ease;
+}
+
+.sidebar nav li.active a {
+  font-weight: bold;
+  color: #007bff;
+}
+
