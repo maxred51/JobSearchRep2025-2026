@@ -1,94 +1,104 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
-import EmployeeHeader from "../../components/EmployeeHeader";
+import "../../styles/candidate/CommunicationHistory.css";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
-import "../../styles/employer/CandidateChat.css";
+import EmployeeHeader from "../../components/EmployeeHeader";
 import { socket } from "../../socket";
 
-export default function EmployeeChat() {
-  const navigate = useNavigate();
-  const { candidateId } = useParams();
-
+function CommunicationHistory() {
+  const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState("");
-  const [candidate, setCandidate] = useState(null);
+  const [userRole, setUserRole] = useState("");
+  const [userId, setUserId] = useState("");
+  const [hrList, setHrList] = useState([]);
+  const [viewMode, setViewMode] = useState("chats");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const token = localStorage.getItem("token");
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-  const userId = Number(localStorage.getItem("userId"));
-  const userRole = "pracownikHR";
+  useEffect(() => {
+    const role = localStorage.getItem("rola") || "kandydat";
+    const id = Number(localStorage.getItem("userId")); 
+
+    setUserRole(role);
+    setUserId(id);
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const resCandidate = await axios.get(
-          `http://localhost:5000/api/kandydat/${candidateId}`,
-          authHeader
-        );
-        setCandidate(resCandidate.data);
+    if (!userId) return;
+    loadChats();
+    loadHRList();
+  }, [userId]);
 
-        const resMessages = await axios.get(
-          `http://localhost:5000/api/wiadomosc/konwersacja/kandydat/${candidateId}`,
-          authHeader
-        );
+  const loadChats = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/wiadomosc/rozmowcy",
+        authHeader
+      );
+      setChats(res.data || []);
+    } catch (err) {
+      console.error("Błąd pobierania listy rozmów:", err);
+    }
+  };
 
-        const formatted = resMessages.data.map((msg) => ({
-          ...msg,
-          from: msg.nadawca_typ === "pracownikHR" ? "employee" : "candidate",
-          content: msg.tresc,
-        }));
+  const loadHRList = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/wiadomosc/pracownicy",
+        authHeader
+      );
+      setHrList(res.data || []);
+    } catch (err) {
+      console.error("Błąd pobierania listy HR:", err);
+    }
+  };
 
-        setMessages(formatted);
+  const loadConversation = async (role, id) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/wiadomosc/konwersacja/${role}/${id}`,
+        authHeader
+      );
 
-        socket.emit("join_room", { role: "kandydat", id: candidateId });
+      const rawMessages = res.data || [];
 
-      } catch (err) {
-        console.error("Błąd przy pobieraniu danych czatu:", err);
-      }
-    };
+      const formatted = rawMessages.map((msg) => ({
+        ...msg,
+        from: msg.nadawca_typ === userRole ? "user" : "other",
+        content: msg.tresc,
+      }));
 
-    fetchData();
-  }, [candidateId]);
+      setMessages(formatted);
+      setSelectedChat({ role, userId: id });
+      setViewMode("chat");
 
+      await axios.put(
+        `http://localhost:5000/api/wiadomosc/przeczytane/${role}/${id}`,
+        {},
+        authHeader
+      );
 
-  useEffect(() => {
-    const handler = (msg) => {
-      const isRelevant =
-        Number(msg.nadawca_id) === Number(candidateId) ||
-        Number(msg.odbiorca_id) === Number(candidateId);
+      socket.emit("join_room", { role, id });
+    } catch (err) {
+      console.error("Błąd pobierania konwersacji:", err);
+    }
+  };
 
-      if (!isRelevant) return;
+  const sendMessage = () => {
+    if (!newMessage.trim() || !selectedChat) {
+      setErrorMessage("Nie można wysłać pustej wiadomości!");
+      return;
+    }
 
-      const isFromCandidate = msg.nadawca_typ === "kandydat";
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          ...msg,
-          from: isFromCandidate ? "candidate" : "employee",
-          content: msg.tresc,
-        },
-      ]);
-    };
-
-    socket.on("message:receive", handler);
-
-    return () => {
-      socket.off("message:receive", handler);
-    };
-  }, [candidateId]);
-
-
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
+    setErrorMessage("");
 
     socket.emit("message:send", {
-      nadawca_id: userId,
-      nadawca_typ: "pracownikHR",
-      odbiorca_id: candidateId,
-      odbiorca_typ: "kandydat",
+      odbiorca_id: selectedChat.userId,
+      odbiorca_typ: selectedChat.role,
       tresc: newMessage,
     });
 
@@ -96,76 +106,138 @@ export default function EmployeeChat() {
       ...prev,
       {
         id: Date.now(),
-        nadawca_id: userId,
-        nadawca_typ: "pracownikHR",
-        odbiorca_id: candidateId,
-        odbiorca_typ: "kandydat",
         tresc: newMessage,
-        from: "employee",
+        nadawca_typ: userRole,
+        odbiorca_id: selectedChat.userId,
+        odbiorca_typ: selectedChat.role,
+        from: "user",
         content: newMessage,
+        data: new Date().toISOString(),
       },
     ]);
 
     setNewMessage("");
   };
 
+  useEffect(() => {
+    const handleReceive = (msg) => {
+      if (!selectedChat) return;
 
-  const handleBack = () => {
-    navigate("/candidates");
-  };
+      const isRelevant =
+        Number(msg.nadawca_id) === selectedChat.userId ||
+        Number(msg.odbiorca_id) === selectedChat.userId;
 
+      if (!isRelevant) return;
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...msg,
+          from: msg.nadawca_typ === userRole ? "user" : "other",
+          content: msg.tresc,
+        },
+      ]);
+    };
+
+    socket.on("message:receive", handleReceive);
+    return () => {
+      socket.off("message:receive", handleReceive);
+    };
+  }, [selectedChat, userRole]);
 
   return (
-    <div className="candidate-chat-page">
+    <div className="page">
       <EmployeeHeader />
+      <div className="container">
+        <EmployeeSidebar active="candidates" />
+        <main className="mainContent">
+          <section className="content">
+            <h2>Historia komunikacji</h2>
 
-      <div className="candidate-chat-content">
-        <EmployeeSidebar />
+            <div className="chatLayout">
+              <aside className="chatSidebar">
+                {viewMode === "chats" &&
+                  (chats.length === 0 ? (
+                    <p>Brak rozmów</p>
+                  ) : (
+                    chats.map((chat) => (
+                      <div
+                        key={chat.id}
+                        className={`chatItem ${
+                          selectedChat?.userId === chat.id ? "active" : ""
+                        }`}
+                        onClick={() => loadConversation(chat.rola, chat.id)}
+                      >
+                        <strong>
+                          {chat.imie} {chat.nazwisko}
+                        </strong>
+                      </div>
+                    ))
+                  ))}
 
-        <main className="candidate-chat-main">
-          <section className="chat-section">
+                {viewMode === "newChat" &&
+                  (hrList.length === 0 ? (
+                    <p>Brak dostępnych pracowników HR</p>
+                  ) : (
+                    hrList.map((hr) => (
+                      <div
+                        key={hr.id}
+                        className="chatItem"
+                        onClick={() => loadConversation("pracownikHR", hr.id)}
+                      >
+                        <strong>
+                          {hr.imie} {hr.nazwisko}
+                        </strong>
+                      </div>
+                    ))
+                  ))}
+              </aside>
 
-            <button className="back-btn" onClick={handleBack}>
-              ← Powrót
-            </button>
+              <div className="chatBox">
+                {selectedChat ? (
+                  <>
+                    <header className="chatHeader">
+                      Rozmowa 
+                    </header>
 
-            <div className="chat-box">
-              <div className="chat-header">
-                <div className="chat-user">
-                  {candidate ? `${candidate.imie} ${candidate.nazwisko}` : "Ładowanie..."}
-                </div>
-                <div className="chat-menu">☰</div>
+                    <div className="messages">
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`message ${
+                            msg.from === "user" ? "from-user" : "from-other"
+                          }`}
+                        >
+                          <p>{msg.content}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <footer className="chatInput">
+                      <input
+                        type="text"
+                        placeholder="Napisz wiadomość..."
+                        value={newMessage}
+                        onChange={(e) => {
+                          setNewMessage(e.target.value);
+                          if (e.target.value.trim()) setErrorMessage("");
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                      />
+                      <button onClick={sendMessage}>Wyślij</button>
+                      {errorMessage && (
+                        <div className="errorMessage">
+                          <p>{errorMessage}</p>
+                        </div>
+                      )}
+                    </footer>
+                  </>
+                ) : (
+                  <p className="noChatInfo">
+                    Wybierz rozmowę z listy lub rozpocznij nową
+                  </p>
+                )}
               </div>
-
-              <div className="chat-messages">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`chat-message ${
-                      msg.from === "employee"
-                        ? "from-employee"
-                        : "from-candidate"
-                    }`}
-                  >
-                    <div className="chat-bubble">{msg.content}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="chat-input-container">
-                <input
-                  type="text"
-                  placeholder="Napisz wiadomość..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="chat-input"
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                />
-                <button onClick={handleSend} className="chat-send-btn">
-                  ➤
-                </button>
-              </div>
-
             </div>
           </section>
         </main>
@@ -173,3 +245,5 @@ export default function EmployeeChat() {
     </div>
   );
 }
+
+export default CommunicationHistory;

@@ -10,7 +10,6 @@ export default function Header() {
         <button className="font-btn">A+</button>
         <button className="font-btn">A-</button>
         <span className="welcome">Witaj, pracowniku</span>
-        <span className="notifications">🔔</span>
         <Link to="/settings" className="settings-link">Ustawienia konta</Link>
         <Link to="/login" className="logout-link">Wyloguj się</Link>
       </div>

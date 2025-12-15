@@ -38,7 +38,7 @@ export default function ApplicationDetails() {
 
       <div className="page-body">
         <aside className="left-sidebar">
-          <EmployeeSidebar />
+          <EmployeeSidebar active="applications" />
         </aside>
 
         <main className="content-area">

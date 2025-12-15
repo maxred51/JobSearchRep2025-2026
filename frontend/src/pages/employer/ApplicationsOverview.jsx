@@ -138,7 +138,7 @@ export default function ApplicationsOverview() {
       <EmployeeHeader />
 
       <div className="applications-overview-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="applications" />
 
         <main className="applications-overview-main">
           <section className="content-section">
@@ -232,12 +232,6 @@ export default function ApplicationsOverview() {
                           }
                         >
                           Podgląd
-                        </button>
-                        <button
-                          className="edit-btn"
-                          onClick={() => handleEdit(app.id)}
-                        >
-                          Rozmowa
                         </button>
                         <button
                           className="delete-btn"

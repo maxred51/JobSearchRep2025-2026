@@ -116,7 +116,7 @@ export default function Categories() {
       <EmployeeHeader />
 
       <div className="categories-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="categories" />
 
         <main className="categories-main">
           <section className="content-section">

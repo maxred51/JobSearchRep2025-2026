@@ -45,9 +45,9 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT f.id, f.nazwa AS nazwa_firmy ' +
-      'FROM obserwowana_firma of ' +
-      'JOIN firma f ON of.Firmaid = f.id ' +
-      'WHERE of.Kandydatid = ?',
+      'FROM obserwowana_firma obf ' +
+      'JOIN firma f ON obf.Firmaid = f.id ' +
+      'WHERE obf.Kandydatid = ?',
       [req.user.id]
     );
     res.json(rows);

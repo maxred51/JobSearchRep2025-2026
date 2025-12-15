@@ -173,7 +173,7 @@ export default function AddOffer() {
     <div className="employee-layout">
       <EmployeeHeader />
       <div className="employee-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="offers"/>
 
         <main className="employee-main">
           <a href="/employee" className="back-link">← Powrót</a>

@@ -6,7 +6,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema mydb
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
+CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8mb4;
 USE `mydb` ;
 
 -- -----------------------------------------------------
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`administrator` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`kandydat`
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`kandydat` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`kategoriapracy`
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`kategoriapracy` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`firma`
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`firma` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`pracownikHR`
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`pracownikHR` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`kategoriakandydata`
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`kategoriakandydata` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`kandydat_kategoriakandydata`
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`kandydat_kategoriakandydata` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`oferta`
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`oferta` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`zapisana_oferta`
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`zapisana_oferta` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`obserwowana_firma`
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`obserwowana_firma` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`aplikacja`
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`aplikacja` (
     FOREIGN KEY (`Kandydatid`) REFERENCES `mydb`.`kandydat` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_Aplikacja_Oferta1`
     FOREIGN KEY (`Ofertaid`) REFERENCES `mydb`.`oferta` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`opinia`
@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`opinia` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`poziom`
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`poziom` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`oferta_poziom`
@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`oferta_poziom` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`tryb`
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`tryb` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`oferta_tryb`
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`oferta_tryb` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`umowa`
@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`umowa` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`oferta_umowa`
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`oferta_umowa` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`wymiar`
@@ -362,7 +362,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`wymiar` (
 )
 ENGINE = InnoDB
 AUTO_INCREMENT = 1
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`oferta_wymiar`
@@ -383,7 +383,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`oferta_wymiar` (
     ON UPDATE NO ACTION
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`wiadomosc`
@@ -399,7 +399,7 @@ CREATE TABLE `mydb`.`wiadomosc` (
   data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`powiadomienie`
@@ -416,7 +416,7 @@ CREATE TABLE `mydb`.`powiadomienie` (
   FOREIGN KEY (Ofertaid) REFERENCES oferta(id) ON DELETE CASCADE 
 )
 ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8;
+DEFAULT CHARACTER SET = utf8mb4;
 
 -- -----------------------------------------------------
 -- Table `mydb`.`otp`

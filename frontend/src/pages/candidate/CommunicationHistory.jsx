@@ -25,9 +25,13 @@ function CommunicationHistory() {
 
     setUserRole(role);
     setUserId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
     loadChats();
     loadHRList();
-  }, []);
+  }, [userId]);
 
   const loadChats = async () => {
     try {
@@ -64,7 +68,8 @@ function CommunicationHistory() {
 
       const formatted = rawMessages.map((msg) => ({
         ...msg,
-        typ: Number(msg.nadawca_id) === Number(userId) ? "wyslana" : "odebrana",
+        from: msg.nadawca_typ === userRole ? "user" : "other",
+        content: msg.tresc,
       }));
 
       setMessages(formatted);
@@ -85,13 +90,11 @@ function CommunicationHistory() {
 
   const sendMessage = () => {
     if (!newMessage.trim() || !selectedChat) {
-      setErrorMessage("Nie można wysłać pustej wiadomości!"); 
+      setErrorMessage("Nie można wysłać pustej wiadomości!");
       return;
     }
 
     setErrorMessage("");
-
-    const role = localStorage.getItem("rola") || "kandydat";
 
     socket.emit("message:send", {
       odbiorca_id: selectedChat.userId,
@@ -102,13 +105,13 @@ function CommunicationHistory() {
     setMessages((prev) => [
       ...prev,
       {
-        id: Math.random(),
+        id: Date.now(),
         tresc: newMessage,
-        nadawca_id: userId,
-        nadawca_typ: role,
+        nadawca_typ: userRole,
         odbiorca_id: selectedChat.userId,
         odbiorca_typ: selectedChat.role,
-        typ: "wyslana",
+        from: "user",
+        content: newMessage,
         data: new Date().toISOString(),
       },
     ]);
@@ -117,29 +120,30 @@ function CommunicationHistory() {
   };
 
   useEffect(() => {
-  const handleReceive = (msg) => {
-    if (!selectedChat) return;
+    const handleReceive = (msg) => {
+      if (!selectedChat) return;
 
-    const isFromSelected =
-      Number(msg.nadawca_id) === Number(selectedChat.userId) ||
-      Number(msg.odbiorca_id) === Number(selectedChat.userId);
+      const isRelevant =
+        Number(msg.nadawca_id) === selectedChat.userId ||
+        Number(msg.odbiorca_id) === selectedChat.userId;
 
-    if (!isFromSelected) return;
+      if (!isRelevant) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        ...msg,
-        typ: Number(msg.nadawca_id) === Number(userId) ? "wyslana" : "odebrana",
-      },
-    ]);
-  };
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...msg,
+          from: msg.nadawca_typ === userRole ? "user" : "other",
+          content: msg.tresc,
+        },
+      ]);
+    };
 
-  socket.on("message:receive", handleReceive);
-  return () => {
-    socket.off("message:receive", handleReceive);
-  };
-}, [selectedChat, userId]);
+    socket.on("message:receive", handleReceive);
+    return () => {
+      socket.off("message:receive", handleReceive);
+    };
+  }, [selectedChat, userRole]);
 
   return (
     <div className="page">
@@ -152,19 +156,6 @@ function CommunicationHistory() {
 
             <div className="chatLayout">
               <aside className="chatSidebar">
-                <div className="chatSidebarHeader">
-                  <h3>
-                    {viewMode === "newChat" ? "Nowa rozmowa" : "Twoje rozmowy"}
-                  </h3>
-                  <button
-                    onClick={() =>
-                      setViewMode(viewMode === "newChat" ? "chats" : "newChat")
-                    }
-                  >
-                    {viewMode === "newChat" ? "← Wróć" : "+ Nowa rozmowa"}
-                  </button>
-                </div>
-
                 {viewMode === "chats" &&
                   (chats.length === 0 ? (
                     <p>Brak rozmów</p>
@@ -206,7 +197,7 @@ function CommunicationHistory() {
                 {selectedChat ? (
                   <>
                     <header className="chatHeader">
-                      Rozmowa z {selectedChat.role} #{selectedChat.userId}
+                      Rozmowa 
                     </header>
 
                     <div className="messages">
@@ -214,10 +205,10 @@ function CommunicationHistory() {
                         <div
                           key={msg.id}
                           className={`message ${
-                            msg.typ === "wyslana" ? "sent" : "received"
+                            msg.from === "user" ? "from-user" : "from-other"
                           }`}
                         >
-                          <p>{msg.tresc}</p>
+                          <p>{msg.content}</p>
                         </div>
                       ))}
                     </div>

@@ -63,46 +63,6 @@ const UserManagement = () => {
       setUpdating(false);
     }
   };
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-
-  const handlePasswordReset = async () => {
-    try {
-      setUpdating(true);
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `http://localhost:5000/api/administrator/uzytkownicy/${id}/reset-password`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Wysłano kod OTP do użytkownika!");
-    } catch (err) {
-      console.error("Błąd przy inicjacji resetu hasła:", err);
-      alert("Nie udało się wysłać kodu OTP.");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const handleOtpVerify = async () => {
-    try {
-      setUpdating(true);
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `http://localhost:5000/api/administrator/uzytkownicy/${id}/verify-otp`,
-        { otp, noweHaslo: newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Hasło zostało zmienione!");
-      setOtp("");
-      setNewPassword("");
-    } catch (err) {
-      console.error("Błąd przy weryfikacji OTP:", err);
-      alert(err.response?.data?.error || "Nie udało się zmienić hasła.");
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   if (loading) return <p>Ładowanie danych...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
@@ -161,35 +121,6 @@ const UserManagement = () => {
                   >
                     Odblokuj
                   </button>
-                  <button
-                    className="btn reset"
-                    onClick={handlePasswordReset}
-                    disabled={updating}
-                  >
-                    Wyślij kod OTP
-                  </button>
-
-                    <div className="otp-section">
-                      <input
-                        type="text"
-                        placeholder="Wprowadź kod OTP"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                      />
-                      <input
-                        type="password"
-                        placeholder="Nowe hasło"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                      />
-                      <button
-                        onClick={handleOtpVerify}
-                        className="btn reset"
-                        disabled={updating}
-                      >
-                        Zmień hasło
-                      </button>
-                    </div>
                 </div>
               </div>
 

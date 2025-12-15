@@ -163,6 +163,9 @@ const pracownicy = pracownicyRes.data.map((p) => ({
               </tbody>
             </table>
           </section>
+          <Link to={`/communicationview`} className="btn-manage">
+                Rozmowy z użytkownikami
+          </Link>
         </main>
       </div>
     </div>

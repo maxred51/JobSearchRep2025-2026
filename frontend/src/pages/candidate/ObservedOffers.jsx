@@ -73,7 +73,7 @@ function ObservedOffers() {
     <div className="dashboard-wrapper">
       <Header />
       <div className="dashboard-content">
-        <Sidebar />
+        <Sidebar active="offers" />
 
         <main className="offers-section">
           <section className="observed-companies">

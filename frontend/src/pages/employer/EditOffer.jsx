@@ -179,7 +179,7 @@ export default function EditOffer() {
     <div className="edit-offer-page">
       <Header />
       <div className="edit-offer-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="offers" />
         <main className="edit-offer-main">
           <a href="/employee" className="back-link">← Powrót</a>
           <h2>Edytowanie oferty</h2>
@@ -245,8 +245,6 @@ export default function EditOffer() {
                   ))}
                 </div>
               </div>
-
-              <label>Aktywna:<input type="checkbox" name="active" checked={form.active} onChange={handleChange}/></label>
               <div className="form-actions"><button type="submit" className="btn-edit">Edytuj</button></div>
             </div>
           </form>

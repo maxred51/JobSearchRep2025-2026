@@ -96,3 +96,12 @@
   transform: scale(1.1);
 }
 
+.manage-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}

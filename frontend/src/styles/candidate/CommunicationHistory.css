@@ -98,28 +98,6 @@
   border-radius: 10px;
 }
 
-/* Kontener wiadomości */
-.messages {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  height: calc(100% - 80px);
-  overflow-y: auto;
-  background: #f7f7f7;
-}
-
-/* Ogólne dla balonów */
-.message {
-  max-width: 65%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-/* Twoje wiadomości (po prawej) */
-/* Twoje wiadomości (wysłane) po lewej */
 .messages {
   display: flex;
   flex-direction: column;
@@ -276,4 +254,27 @@
   margin-bottom: 5px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.message {
+  max-width: 60%;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 10px;
+  word-wrap: break-word;
+}
+
+.from-other {
+  
+  background-color: #e5e5ea;
+  color: black;
+  margin-left: auto; 
+  text-align: left;
+}
+
+.from-user {
+  background-color: #007bff;
+  color: white;
+  margin-right: auto; 
+  text-align: right;
 }

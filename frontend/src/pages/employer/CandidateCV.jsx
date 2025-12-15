@@ -64,7 +64,7 @@ export default function CandidateCV() {
       <EmployeeHeader />
 
       <div className="candidate-cv-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="candidates" />
 
         <main className="candidate-cv-main">
           <section className="cv-section">

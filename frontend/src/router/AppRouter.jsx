@@ -135,7 +135,7 @@ function AppRouter() {
         />
 
         <Route
-          path="/candidatechat/:candidateId"
+          path="/candidatechat"
           element={<PrivateRoute element={CandidateChat} roles={["pracownikHR"]} />}
         />
 
@@ -156,7 +156,7 @@ function AppRouter() {
         />
 
         <Route
-          path="/communicationview/:role/:userId"
+          path="/communicationview"
           element={<PrivateRoute element={CommunicationView} roles={["administrator"]} />}
         />
 

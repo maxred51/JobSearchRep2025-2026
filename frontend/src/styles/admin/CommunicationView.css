@@ -55,3 +55,17 @@
   background: #e8f8f0;
   align-self: flex-end;
 }
+
+.from-other {
+  background-color: #e5e5ea;
+  color: black;
+  margin-left: auto; 
+  text-align: left;
+}
+
+.from-user {
+  background-color: #007bff;
+  color: white;
+  margin-right: auto; 
+  text-align: right;
+}

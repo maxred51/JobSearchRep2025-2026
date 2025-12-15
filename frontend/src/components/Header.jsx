@@ -24,36 +24,49 @@ export default function Header() {
   };
 
   const fetchNotifications = useCallback(async () => {
-    if (!kandydatId || !token) return;
+  if (!kandydatId || !token) return;
 
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/api/powiadomienie/kandydat/${kandydatId}/observed-offers`,
-        authHeader
-      );
+  setLoading(true);
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/powiadomienie/kandydat/${kandydatId}/observed-offers`,
+      authHeader
+    );
 
-      const data = Array.isArray(res.data) ? res.data : [];
+    const raw = Array.isArray(res.data) ? res.data : [];
 
-      const normalized = data.map((n) => ({
-        ...n,
-        id: n.id ?? n._id ?? null,
-        OfertaId: n.OfertaId ?? n.ofertaId ?? n.offerId ?? null,
-        przeczytane: !!n.przeczytane,
-      }));
+    const normalized = raw.map((n) => {
+      const date = parseNotifDate(n);
 
-      normalized.sort((a, b) => new Date(b.data) - new Date(a.data));
-      setObservedOffers(normalized);
-    } catch (err) {
-      console.error("Błąd pobierania powiadomień:", err);
-      if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        navigate("/login");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [kandydatId, token, navigate]);
+      return {
+        id: n.id ?? null,
+
+        OfertaId: n.OfertaId ?? n.Ofertaid ?? n.ofertaId ?? n.offerId ?? null,
+
+        przeczytane: Boolean(n.przeczytane),
+
+        data: date.toISOString(),
+
+        powiadomienie_tresc:
+          n.powiadomienie_tresc ??
+          n.tresc ??
+          n.message ??
+          (n.tytul
+            ? `Nowa oferta: ${n.tytul} – ${n.nazwa_firmy}`
+            : "Nowa oferta z obserwowanej firmy"),
+      };
+    });
+
+    normalized.sort((a, b) => new Date(b.data) - new Date(a.data));
+    setObservedOffers(normalized);
+  } catch (err) {
+    console.error("Błąd pobierania powiadomień:", err);
+  } finally {
+    setLoading(false);
+  }
+}, [kandydatId, token]);
+
+
 
   const prependNotification = useCallback((notif) => {
     if (!notif) return;
@@ -138,6 +151,17 @@ export default function Header() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  const markAsReadLocal = (offerId) => {
+  setObservedOffers((prev) =>
+    prev.map((o) =>
+      o.OfertaId === offerId ? { ...o, przeczytane: true } : o
+    )
+  );
+};
+
+>>>>>>> 00fcb07 (Zmiany)
   const deleteNotification = async (id) => {
     if (!id) return;
 
@@ -223,7 +247,11 @@ export default function Header() {
                             className="mark-read-btn"
                             onClick={(e) => {
                               e.stopPropagation();
+<<<<<<< HEAD
                               markAsRead(offer.id);
+=======
+                              markAsReadLOcal(offer.id);
+>>>>>>> 00fcb07 (Zmiany)
                             }}
                           >
                             Przeczytane

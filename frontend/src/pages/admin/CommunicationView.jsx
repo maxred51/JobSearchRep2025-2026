@@ -1,73 +1,88 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "../../styles/admin/CommunicationView.css";
-import AdminHeader from "../../components/AdminHeader";
+import "../../styles/candidate/CommunicationHistory.css";
 import AdminSidebar from "../../components/AdminSidebar";
-import { socket } from "../../socket"; 
+import AdminHeader from "../../components/AdminHeader";
+import { socket } from "../../socket";
 
-const CommunicationView = () => {
-  const [hrList, setHrList] = useState([]);
+function CommunicationHistory() {
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [userId, setUserId] = useState("");
+  const [hrList, setHrList] = useState([]);
   const [viewMode, setViewMode] = useState("chats");
   const [errorMessage, setErrorMessage] = useState("");
 
   const token = localStorage.getItem("token");
-  const adminId = Number(localStorage.getItem("userId")); 
-  const messagesEndRef = useRef(null);
-
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  useEffect(() => {
+    const role = localStorage.getItem("rola") || "kandydat";
+    const id = Number(localStorage.getItem("userId")); 
 
-  const loadHRList = async () => {
-    try {
-      const res = await axios.get("http://localhost:5000/api/wiadomosc/pracownicy", authHeader);
-      setHrList(res.data || []);
-    } catch (err) {
-      console.error("Błąd pobierania listy HR:", err);
-    }
-  };
+    setUserRole(role);
+    setUserId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    loadChats();
+    loadHRList();
+  }, [userId]);
 
   const loadChats = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/wiadomosc/lista", authHeader);
+      const res = await axios.get(
+        "http://localhost:5000/api/wiadomosc/rozmowcy",
+        authHeader
+      );
       setChats(res.data || []);
     } catch (err) {
       console.error("Błąd pobierania listy rozmów:", err);
     }
   };
 
-  const loadConversation = async (hrId) => {
-    if (!hrId) return;
+  const loadHRList = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/wiadomosc/konwersacja/pracownikHR/${hrId}`,
+        "http://localhost:5000/api/wiadomosc/pracownicy",
+        authHeader
+      );
+      setHrList(res.data || []);
+    } catch (err) {
+      console.error("Błąd pobierania listy HR:", err);
+    }
+  };
+
+  const loadConversation = async (role, id) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/wiadomosc/konwersacja/${role}/${id}`,
         authHeader
       );
 
-      const formatted = (res.data || []).map((msg) => ({
+      const rawMessages = res.data || [];
+
+      const formatted = rawMessages.map((msg) => ({
         ...msg,
-        typ: msg.nadawca_id === adminId ? "admin" : "worker",
+        from: msg.nadawca_typ === userRole ? "user" : "other",
+        content: msg.tresc,
       }));
 
       setMessages(formatted);
-      setSelectedChat(hrId);
+      setSelectedChat({ role, userId: id });
       setViewMode("chat");
 
       await axios.put(
-        `http://localhost:5000/api/wiadomosc/mark-read/pracownikHR/${hrId}`,
+        `http://localhost:5000/api/wiadomosc/przeczytane/${role}/${id}`,
         {},
         authHeader
       );
 
-      socket.emit("join_room", { role: "pracownikHR", id: hrId });
-
-      scrollToBottom();
+      socket.emit("join_room", { role, id });
     } catch (err) {
       console.error("Błąd pobierania konwersacji:", err);
     }
@@ -81,82 +96,81 @@ const CommunicationView = () => {
 
     setErrorMessage("");
 
-    const msgData = {
-      odbiorca_id: selectedChat,
-      odbiorca_typ: "pracownikHR",
+    socket.emit("message:send", {
+      odbiorca_id: selectedChat.userId,
+      odbiorca_typ: selectedChat.role,
       tresc: newMessage,
-      nadawca_id: adminId,
-      nadawca_typ: "admin",
-    };
-
-    socket.emit("message:send", msgData);
+    });
 
     setMessages((prev) => [
       ...prev,
-      { ...msgData, typ: "admin", data: new Date().toISOString() },
+      {
+        id: Date.now(),
+        tresc: newMessage,
+        nadawca_typ: userRole,
+        odbiorca_id: selectedChat.userId,
+        odbiorca_typ: selectedChat.role,
+        from: "user",
+        content: newMessage,
+        data: new Date().toISOString(),
+      },
     ]);
 
     setNewMessage("");
-    scrollToBottom();
   };
 
   useEffect(() => {
     const handleReceive = (msg) => {
       if (!selectedChat) return;
-      const isFromSelected =
-        msg.nadawca_id === selectedChat || msg.odbiorca_id === selectedChat;
-      if (!isFromSelected) return;
+
+      const isRelevant =
+        Number(msg.nadawca_id) === selectedChat.userId ||
+        Number(msg.odbiorca_id) === selectedChat.userId;
+
+      if (!isRelevant) return;
 
       setMessages((prev) => [
         ...prev,
-        { ...msg, typ: msg.nadawca_id === adminId ? "admin" : "worker" },
+        {
+          ...msg,
+          from: msg.nadawca_typ === userRole ? "user" : "other",
+          content: msg.tresc,
+        },
       ]);
-      scrollToBottom();
     };
 
     socket.on("message:receive", handleReceive);
-    return () => socket.off("message:receive", handleReceive);
-  }, [selectedChat, adminId]);
-
-  useEffect(() => {
-    loadHRList();
-    loadChats();
-  }, []);
+    return () => {
+      socket.off("message:receive", handleReceive);
+    };
+  }, [selectedChat, userRole]);
 
   return (
-    <div className="communication-layout">
+    <div className="page">
       <AdminHeader />
-      <div className="communication-body">
-        <AdminSidebar active="communication" />
-        <main className="communication-main">
-          <section className="communication-section">
-            <a href="/offermanage" className="back-link">← Powrót</a>
+      <div className="container">
+        <AdminSidebar active="users" />
+        <main className="mainContent">
+          <section className="content">
             <h2>Historia komunikacji</h2>
 
             <div className="chatLayout">
-              <aside className="chatList">
-                <div className="chatListHeader">
-                  <h3>{viewMode === "newChat" ? "Nowa rozmowa" : "Twoje rozmowy"}</h3>
-                  <button
-                    onClick={() => setViewMode(viewMode === "newChat" ? "chats" : "newChat")}
-                  >
-                    {viewMode === "newChat" ? "← Wróć" : "+ Nowa rozmowa"}
-                  </button>
-                </div>
-
+              <aside className="chatSidebar">
                 {viewMode === "chats" &&
                   (chats.length === 0 ? (
                     <p>Brak rozmów</p>
                   ) : (
                     chats.map((chat) => (
                       <div
-                        key={chat.rozmowca_id}
-                        className={`chatItem ${selectedChat === chat.rozmowca_id ? "active" : ""}`}
-                        onClick={() => loadConversation(chat.rozmowca_id)}
+                        key={chat.id}
+                        className={`chatItem ${
+                          selectedChat?.userId === chat.id ? "active" : ""
+                        }`}
+                        onClick={() => loadConversation(chat.rola, chat.id)}
                       >
-                        <b>{chat.rozmowca_nazwa || `HR ID ${chat.rozmowca_id}`}</b>
-                        <p>{chat.tresc}</p>
-                        <small>{new Date(chat.data).toLocaleString()}</small>
+                        <strong>
+                          {chat.imie} {chat.nazwisko}
+                        </strong>
                       </div>
                     ))
                   ))}
@@ -166,9 +180,14 @@ const CommunicationView = () => {
                     <p>Brak dostępnych pracowników HR</p>
                   ) : (
                     hrList.map((hr) => (
-                      <div key={hr.id} className="chatItem" onClick={() => loadConversation(hr.id)}>
-                        <b>{hr.imie} {hr.nazwisko}</b>
-                        <p>{hr.email}</p>
+                      <div
+                        key={hr.id}
+                        className="chatItem"
+                        onClick={() => loadConversation("pracownikHR", hr.id)}
+                      >
+                        <strong>
+                          {hr.imie} {hr.nazwisko}
+                        </strong>
                       </div>
                     ))
                   ))}
@@ -177,21 +196,24 @@ const CommunicationView = () => {
               <div className="chatBox">
                 {selectedChat ? (
                   <>
-                    <div className="chatHeader">
-                      <span>Rozmowa z HR #{selectedChat}</span>
-                    </div>
+                    <header className="chatHeader">
+                      Rozmowa 
+                    </header>
 
                     <div className="messages">
-                      {messages.map((msg, i) => (
-                        <div key={i} className={`message ${msg.typ}`}>
-                          <p>{msg.tresc}</p>
-                          <small>{new Date(msg.data).toLocaleString()}</small>
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`message ${
+                            msg.from === "user" ? "from-user" : "from-other"
+                          }`}
+                        >
+                          <p>{msg.content}</p>
                         </div>
                       ))}
-                      <div ref={messagesEndRef} />
                     </div>
 
-                    <div className="chatInput">
+                    <footer className="chatInput">
                       <input
                         type="text"
                         placeholder="Napisz wiadomość..."
@@ -203,11 +225,17 @@ const CommunicationView = () => {
                         onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                       />
                       <button onClick={sendMessage}>Wyślij</button>
-                      {errorMessage && <div className="errorMessage">{errorMessage}</div>}
-                    </div>
+                      {errorMessage && (
+                        <div className="errorMessage">
+                          <p>{errorMessage}</p>
+                        </div>
+                      )}
+                    </footer>
                   </>
                 ) : (
-                  <p>Wybierz rozmowę z listy lub rozpocznij nową</p>
+                  <p className="noChatInfo">
+                    Wybierz rozmowę z listy lub rozpocznij nową
+                  </p>
                 )}
               </div>
             </div>
@@ -216,6 +244,6 @@ const CommunicationView = () => {
       </div>
     </div>
   );
-};
+}
 
-export default CommunicationView;
+export default CommunicationHistory;

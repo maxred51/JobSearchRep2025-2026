@@ -54,7 +54,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // POWIADOMIENIE SYSTEMOWE DLA ADMINISTRATORÓW
-    const trescAdmin = `Nowa aplikacja: ${oferta.kandydatImie} ${oferta.kandydatNazwisko} ` +
+    /*const trescAdmin = `Nowa aplikacja: ${oferta.kandydatImie} ${oferta.kandydatNazwisko} ` +
                        `aplikował/a na ofertę "${oferta.tytul}" (ID: ${Ofertaid}) ` +
                        `w firmie ${oferta.firma} (HR: ${oferta.hrImie} ${oferta.hrNazwisko})`;
 
@@ -62,7 +62,7 @@ router.post('/', authMiddleware, async (req, res) => {
       `INSERT INTO powiadomienie (typ, tresc, Kandydatid, Ofertaid)
        VALUES ('system', ?, ?, ?)`,
       [trescAdmin, Kandydatid, Ofertaid]
-    );
+    );*/
 
     res.status(201).json({ Kandydatid, Ofertaid, status: "oczekujaca", kwota, odpowiedz });
   } catch (error) {

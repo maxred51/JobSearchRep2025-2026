@@ -246,13 +246,7 @@ const JobOfferEdit = () => {
                   ))}
                 </div>
               </div>
-
-              <label>
-                Aktywna:
-                <input type="checkbox" name="active" checked={form.active} onChange={handleChange} />
-              </label>
-
-              <button type="submit" className="btn-submit">💾 Zapisz zmiany</button>
+              <button type="submit" className="btn-submit"> Zapisz zmiany</button>
             </form>
           </section>
         </main>

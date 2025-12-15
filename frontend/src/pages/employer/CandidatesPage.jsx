@@ -152,7 +152,7 @@ const CandidatesPage = () => {
     <div className="employee-layout">
       <EmployeeHeader />
       <div className="employee-content">
-        <EmployeeSidebar />
+        <EmployeeSidebar active="candidates" />
 
         <main className="employee-main">
           <section className="candidates-section">
@@ -202,19 +202,19 @@ const CandidatesPage = () => {
                       <Link to={`/candidatecv/${c.id}`} title="CV kandydata">
                         <FaEye className="icon" />
                       </Link>
-
-                      <Link
-                        to={`/candidatechat/${c.id}`}
-                        title="Czat z kandydatem"
-                      >
-                        <FaComments className="icon" />
-                      </Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
+          <Link
+            class="btn-manage"
+            to={`/candidatechat`}
+            title="Czat z kandydatem"
+          >
+            Rozmowy z użytkownikami
+          </Link>
         </main>
       </div>
     </div>

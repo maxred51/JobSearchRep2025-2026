@@ -124,9 +124,6 @@ const JobOfferManage = () => {
               <Link to={`/offeredit/${offer.id}`} className="btn-manage">
                 Edytuj ofertę
               </Link>
-              <Link to={`/communicationview/pracownikHR/${offer.id}`} className="btn-message">
-                Wyślij wiadomość
-              </Link>
               <button
                 className="btn-delete"
                 onClick={() => handleDelete(offer.id)}
