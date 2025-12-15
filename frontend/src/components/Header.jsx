@@ -151,8 +151,6 @@ export default function Header() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const markAsReadLocal = (offerId) => {
   setObservedOffers((prev) =>
     prev.map((o) =>
@@ -161,7 +159,6 @@ export default function Header() {
   );
 };
 
->>>>>>> 00fcb07 (Zmiany)
   const deleteNotification = async (id) => {
     if (!id) return;
 
@@ -247,11 +244,7 @@ export default function Header() {
                             className="mark-read-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-<<<<<<< HEAD
-                              markAsRead(offer.id);
-=======
                               markAsReadLOcal(offer.id);
->>>>>>> 00fcb07 (Zmiany)
                             }}
                           >
                             Przeczytane
