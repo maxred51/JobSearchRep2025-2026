@@ -13,20 +13,21 @@ export default function MyCV() {
     fetchCv();
   }, []);
 
-  async function fetchCv() {
-    try {
-      const res = await axios.get(`http://localhost:5000/api/kandydat/${getUserId()}/cv`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCvLink(res.data.cv_path);
-    } catch (err) {
-      setCvLink(null); 
-    }
-  }
-
   function getUserId() {
     const payload = JSON.parse(atob(token.split(".")[1]));
     return payload.id;
+  }
+
+  async function fetchCv() {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/kandydat/${getUserId()}/cv`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCvLink(res.data.cv_path);
+    } catch (err) {
+      setCvLink(null);
+    }
   }
 
   async function uploadCv(e) {
@@ -43,11 +44,29 @@ export default function MyCV() {
           "Content-Type": "multipart/form-data",
         },
       });
-
       alert("CV zapisane!");
-      fetchCv(); 
+      fetchCv();
     } catch (err) {
       alert("Błąd przy zapisie CV");
+    }
+  }
+
+  async function downloadCv() {
+    try {
+      const res = await axios.get(`http://localhost:5000${cvLink}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "cv.pdf");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -71,14 +90,9 @@ export default function MyCV() {
             </form>
 
             {cvLink ? (
-              <a
-                className="download-cv"
-                href={`http://localhost:5000${cvLink}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Pobierz aktualne CV
-              </a>
+              <>
+                <button onClick={downloadCv}>Pobierz aktualne CV</button>
+              </>
             ) : (
               <p className="no-cv">Nie przesłałeś jeszcze CV</p>
             )}

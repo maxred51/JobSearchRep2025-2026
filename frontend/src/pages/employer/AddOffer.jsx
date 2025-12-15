@@ -116,7 +116,7 @@ export default function AddOffer() {
           KategoriaPracyid: parseInt(form.category),
           stanowisko: form.position,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}`, "Accept": "application/json; charset=utf-8", "Content-Type": "application/json; charset=utf-8", } }
       );
 
       const ofertaId = ofertaRes.data.id;

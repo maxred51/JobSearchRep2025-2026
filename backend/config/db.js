@@ -11,4 +11,10 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+pool.getConnection().then(conn => {
+  conn.query("SET NAMES utf8mb4");
+  conn.query("SET CHARACTER SET utf8mb4");
+  conn.release();
+});
+
 module.exports = pool;

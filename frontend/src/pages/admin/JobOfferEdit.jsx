@@ -111,7 +111,7 @@ const JobOfferEdit = () => {
       return;
     }
 
-    const headers = { Authorization: `Bearer ${token}` };
+    const headers = { Authorization: `Bearer ${token}`, "Accept": "application/json; charset=utf-8", "Content-Type": "application/json; charset=utf-8", };
     console.log("Dane wysyłane do backendu:", form);
 
     try {

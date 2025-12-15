@@ -53,7 +53,7 @@ app.use((req, res, next) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   next();
 });
-app.use('/uploads', express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rejestracja routerów
 app.use('/api/administrator', administratorRouter);

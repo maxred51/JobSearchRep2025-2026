@@ -10,34 +10,6 @@ const path = require('path');
 const fs = require('fs');
 
 // === KONFIGURACJA MULTER ===
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = `public/uploads/cv/${req.user.id}`;
-    fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const filename = `cv_${Date.now()}${ext}`;
-    cb(null, filename);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
-  fileFilter: (req, file, cb) => {
-    const allowedExts = ['.pdf', '.doc', '.docx'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedExts.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(null, false);
-      
-    }
-  }
-});
-
 
 // CREATE - Rejestracja nowego kandydata
 router.post('/', async (req, res) => {
@@ -175,100 +147,78 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // UPDATE - Upload CV (zabezpieczone)
-router.put('/cv', authMiddleware, async (req, res, next) => {
-    // Sprawdzenie roli + czy użytkownik istnieje
-    if (req.user.role !== 'kandydat') {
-      return res.status(403).json({ error: 'Brak uprawnień' });
-    }
+router.put('/cv', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'kandydat') return res.status(403).json({ error: 'Brak uprawnień' });
 
-    try {
-      const [rows] = await pool.query('SELECT id FROM kandydat WHERE id = ?', [req.user.id]);
-      if (rows.length === 0) {
-        return res.status(404).json({ error: 'Kandydat nie istnieje' });
-      }
-    } catch (err) {
-      console.error('Błąd sprawdzania kandydata:', err);
-      return res.status(500).json({ error: 'Błąd serwera' });
+  // Tworzymy Multer dynamicznie, teraz req.user istnieje
+  const storage = multer.diskStorage({
+    destination: (req2, file, cb) => {
+      const uploadPath = path.join(__dirname, '..', 'uploads', 'cv', String(req.user.id));
+      console.log('Tworzę folder:', uploadPath);
+      fs.mkdirSync(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    },
+    filename: (req2, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `cv_${Date.now()}${ext}`);
     }
+  });
 
-    next(); // upload
-  },
-  upload.single('cv'),
-  async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Brak pliku lub nieprawidłowy format (tylko PDF, DOC, DOCX)' });
+  const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req2, file, cb) => {
+      const allowed = ['.pdf', '.doc', '.docx'];
+      cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
     }
+  }).single('cv');
+
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'Brak pliku' });
 
     const newCvPath = `/uploads/cv/${req.user.id}/${req.file.filename}`;
 
     try {
-      // 1. Pobierz stare CV
-      const [rows] = await pool.query('SELECT cv_path FROM kandydat WHERE id = ?', [req.user.id]);
-      const oldCvPath = rows[0]?.cv_path;
-
-      // 2. Usuń stare CV (jeśli istnieje)
-      if (oldCvPath) {
-        const fullOldPath = path.join(__dirname, '..', 'public', oldCvPath);
-        if (fs.existsSync(fullOldPath)) {
-          try {
-            fs.unlinkSync(fullOldPath);
-            console.log(`Usunięto stare CV: ${fullOldPath}`);
-          } catch (unlinkErr) {
-            console.error(`Nie udało się usunąć starego CV: ${fullOldPath}`, unlinkErr);
-          }
-        }
-      }
-
-      // 3. Zapisz nową ścieżkę
       await pool.query('UPDATE kandydat SET cv_path = ? WHERE id = ?', [newCvPath, req.user.id]);
-
-      // 4. Odpowiedź
-      res.json({
-        message: 'CV zaktualizowane',
-        cv_path: newCvPath
-      });
+      res.json({ message: 'CV zaktualizowane', cv_path: newCvPath });
     } catch (err) {
-      console.error('Błąd przy zapisie CV:', err);
+      console.error(err);
       res.status(500).json({ error: 'Błąd serwera' });
     }
-  }
-);
+  });
+});
+
 
 // Interfejs Kandydat (zakładka "Moje CV") i Interfejs PracownikHR (zakładka "Kandydaci")
 // READ - Pobieranie CV kandydata (zabezpieczone)
 router.get('/:id/cv', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  const userRole = req.user.role;
+  const userId = req.user.id;
+
+  // Kandydat może pobierać tylko swoje CV
+  if (userRole === 'kandydat' && userId !== parseInt(id)) {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+
+  // Inne role mogą pobierać CV dowolnego kandydata
+  if (!['kandydat', 'pracownikHR', 'administrator'].includes(userRole)) {
+    return res.status(403).json({ error: 'Brak uprawnień' });
+  }
+
   try {
-    // Pobierz kandydata
-    const [kandydat] = await pool.query('SELECT cv_path FROM kandydat WHERE id = ?', [id]);
-    if (kandydat.length === 0) {
-      return res.status(404).json({ error: 'Kandydat nie znaleziony' });
-    }
-    if (!kandydat[0].cv_path) {
-      return res.status(404).json({ error: 'CV nie istnieje dla tego kandydata' });
-    }
-    // Weryfikacja uprawnień dla kandydata
-    if (req.user.role === 'kandydat' && req.user.id === parseInt(id)) {
-      return res.json({ cv_path: kandydat[0].cv_path });
-    }
-    // Weryfikacja uprawnień dla pracownika HR
-    if (req.user.role === 'pracownikHR') {
-      const [aplikacje] = await pool.query(
-        'SELECT a.Kandydatid FROM aplikacja a ' +
-        'JOIN oferta o ON a.Ofertaid = o.id ' +
-        'WHERE a.Kandydatid = ? AND o.PracownikHRid = ?',
-        [id, req.user.id]
-      );
-      if (aplikacje.length === 0) {
-        return res.status(403).json({ error: 'Brak uprawnień do wyświetlenia CV tego kandydata' });
-      }
-    }
-    // Administrator ma pełny dostęp
-    res.json({ cv_path: kandydat[0].cv_path });
-  } catch (error) {
+    const [rows] = await pool.query('SELECT cv_path FROM kandydat WHERE id = ?', [id]);
+    if (!rows[0] || !rows[0].cv_path) return res.status(404).json({ error: 'Brak CV' });
+
+    res.json({ cv_path: rows[0].cv_path });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
+
 
 // UPDATE - Aktualizacja kandydata (zabezpieczone)
 router.put('/:id', authMiddleware, async (req, res) => {

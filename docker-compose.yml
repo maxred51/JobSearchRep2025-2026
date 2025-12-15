@@ -10,6 +10,8 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/1-init.sql:ro
@@ -37,6 +39,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
     ports:
       - "5000:5000"
 

@@ -51,7 +51,7 @@ export default function CandidateDashboard() {
     const fetchDictionaries = async () => {
       try {
         const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
+        const headers = { Authorization: `Bearer ${token}`,"Accept": "application/json; charset=utf-8",   "Content-Type": "application/json; charset=utf-8", };
 
         const [modesRes, levelsRes, dimensionsRes, contractsRes] = await Promise.all([
           axios.get("http://localhost:5000/api/tryb", { headers }),

@@ -496,7 +496,7 @@ INSERT INTO `kategoriapracy` (`Nazwa`, `KategoriaPracyid`) VALUES
 ('Testowanie i QA', NULL),
 ('Analiza i zarządzanie projektami', NULL),
 ('Data Science i Big Data', NULL),
-('Cyberbezpieczeństwo', NULL),
+('Cyberbezpieczenstwo', NULL),
 ('UX / UI i Grafika', NULL),
 ('Mobile', NULL),
 ('Embedded i Hardware', NULL),
@@ -563,9 +563,9 @@ INSERT INTO `administrator` (`imie`, `nazwisko`, `plec`, `email`, `haslo`) VALUE
 -- 4. Poziom doświadczenia
 -- =============================================
 INSERT INTO `poziom` (`nazwa`) VALUES
-('praktykant/stażysta'),
+('praktykant/stazysta'),
 ('asystent'),
-('młodszy specjalista'),
+('mlodszy specjalista'),
 ('specjalista'),
 ('ekspert');
 
@@ -573,19 +573,19 @@ INSERT INTO `poziom` (`nazwa`) VALUES
 -- 5. Rodzaj umowy
 -- =============================================
 INSERT INTO `umowa` (`nazwa`) VALUES
-('umowa o pracę'),
+('umowa o prace'),
 ('umowa zlecenie'),
-('umowa o dzieło'),
+('umowa o dzielo'),
 ('kontrakt B2B'),
-('umowa o staż');
+('umowa o staz');
 
 -- =============================================
 -- 6. Wymiar etatu
 -- =============================================
 INSERT INTO `wymiar` (`nazwa`) VALUES
-('pełny etat'),
+('pelny etat'),
 ('1/2 etatu'),
-('część etatu'),
+('czesc etatu'),
 ('dodatkowa/tymczasowa'),
 ('weekendowa');
 

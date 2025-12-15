@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import EmployeeHeader from "../../components/EmployeeHeader";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 import "../../styles/employer/CandidateCV.css";
@@ -18,7 +19,7 @@ export default function CandidateCV() {
     const fetchCandidate = async () => {
       try {
         const res = await fetch(`http://localhost:5000/api/kandydat/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) {
@@ -35,7 +36,7 @@ export default function CandidateCV() {
     const fetchCV = async () => {
       try {
         const res = await fetch(`http://localhost:5000/api/kandydat/${id}/cv`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) {
@@ -57,6 +58,27 @@ export default function CandidateCV() {
 
   const handleBack = () => navigate("/candidates");
 
+  const downloadCv = async () => {
+    if (!cvPath) return;
+
+    try {
+      const res = await axios.get(cvPath, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "cv.pdf");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Błąd przy pobieraniu CV:", err);
+    }
+  };
+
   if (loading || !candidate) return <div>Ładowanie danych...</div>;
 
   return (
@@ -71,15 +93,15 @@ export default function CandidateCV() {
             <button className="back-btn" onClick={handleBack}>← Powrót</button>
 
             <div className="cv-card">
-              <div className="cv-header">     
-                  <h2>CV Kandydata</h2>
+              <div className="cv-header">
+                <h2>CV Kandydata</h2>
               </div>
               <div className="cv-block">
                 <h4>Plik CV</h4>
                 {cvPath ? (
-                  <a className="download-btn" href={cvPath} target="_blank" rel="noopener noreferrer">
+                  <button className="download-btn" onClick={downloadCv}>
                     Pobierz CV
-                  </a>
+                  </button>
                 ) : (
                   <p className="no-cv">{errorCV}</p>
                 )}
