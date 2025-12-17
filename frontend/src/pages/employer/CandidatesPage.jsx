@@ -47,9 +47,7 @@ const CandidatesPage = () => {
         const pracownikHRId = parseInt(localStorage.getItem("userId"));
 
         const myOffers = resOffers.data.filter(
-          (o) =>
-            o.PracownikHRid === pracownikHRId ||
-            o.pracownikHRId === pracownikHRId
+          (o) => o.PracownikHRid === pracownikHRId
         );
         const myOfferIds = myOffers.map((o) => o.id);
 
@@ -58,7 +56,9 @@ const CandidatesPage = () => {
           .map((app) => app.Kandydatid);
 
         const filteredCandidates = resCandidates.data.filter((c) =>
-          candidatesWithApplications.includes(c.id)
+          candidatesWithApplications.length > 0
+            ? candidatesWithApplications.includes(c.id)
+            : true
         );
 
         setCandidates(filteredCandidates);

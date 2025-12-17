@@ -60,7 +60,7 @@ export default function AddOffer() {
           axios.get("/umowa", { headers }),
           axios.get("/kategoriapracy", { headers }),
         ]);
-
+        console.log("Kategorie:", categoriesRes.data);
         setAvailableModes(modesRes.data);
         setAvailableLevels(levelsRes.data);
         setAvailableDimensions(dimensionsRes.data);
@@ -104,7 +104,16 @@ export default function AddOffer() {
         return;
       }
 
-      // 1️⃣ Tworzymy ofertę
+      console.log({
+  tytuł: form.title,
+  opis: form.description,
+  wynagrodzenie: parseFloat(form.salary),
+  wymagania: form.requirements,
+  lokalizacja: form.location,
+  czas: parseInt(form.workTime),
+  KategoriaPracyid: parseInt(form.category),
+});
+
       const ofertaRes = await axios.post(
         "/oferta",
         {
@@ -115,7 +124,6 @@ export default function AddOffer() {
           lokalizacja: form.location,
           czas: parseInt(form.workTime),
           KategoriaPracyid: parseInt(form.category),
-          stanowisko: form.position,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -126,7 +134,6 @@ export default function AddOffer() {
         return;
       }
 
-      // 2️⃣ Funkcja do dodawania powiązań
       const linkRelations = async (fieldName, endpoint, key) => {
         for (const id of form[fieldName]) {
           try {
@@ -148,7 +155,6 @@ export default function AddOffer() {
 
       alert("Oferta oraz powiązania zostały dodane!");
 
-      // 3️⃣ Reset formularza
       setForm({
         title: "",
         description: "",
@@ -252,7 +258,7 @@ export default function AddOffer() {
                     <option value="">-- Wybierz kategorię --</option>
                     {availableCategories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.nazwa}
+                        {cat.Nazwa}
                       </option>
                     ))}
                   </select>

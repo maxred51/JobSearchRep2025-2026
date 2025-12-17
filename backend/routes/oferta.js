@@ -9,13 +9,13 @@ router.post('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'pracownikHR') {
     return res.status(403).json({ error: 'Brak uprawnień' });
   }
-  const { tytuł, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid } = req.body;
+  const { tytul, opis, wynagrodzenie, wymagania, lokalizacja, czas, KategoriaPracyid } = req.body;
   // Walidacja danych
-  if (!tytuł || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid) {
+  if (!tytul || !opis || !wynagrodzenie || !lokalizacja || !czas || !KategoriaPracyid) {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
   // Walidacja długości pól
-  if (tytuł.length > 60 || opis.length > 150 || lokalizacja.length > 50) {
+  if (tytul.length > 60 || opis.length > 150 || lokalizacja.length > 50) {
     return res.status(400).json({ error: 'Przekroczono maksymalną długość pól' });
   }
   // Walidacja formatu pól
@@ -32,7 +32,7 @@ router.post('/', authMiddleware, async (req, res) => {
     // 1. Zapis oferty
     const [result] = await pool.query(
       'INSERT INTO oferta (tytul, opis, wynagrodzenie, wymagania, lokalizacja, czas, PracownikHRid, KategoriaPracyid, aktywna, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, CURRENT_DATE)',
-      [tytuł, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, req.user.id, KategoriaPracyid]
+      [tytul, opis, wynagrodzenie, wymagania || null, lokalizacja, czas, req.user.id, KategoriaPracyid]
     );
 
     const ofertaId = result.insertId;
@@ -77,7 +77,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // 5. Dodanie powiadomienia systemowego dla administratora
-    const trescAdmin = `Dodano ofertę: ${tytuł} w firmie ${hrRow.firma} przez ${hrRow.imie} ${hrRow.nazwisko}`;
+    const trescAdmin = `Dodano ofertę: ${tytul} w firmie ${hrRow.firma} przez ${hrRow.imie} ${hrRow.nazwisko}`;
     await pool.query(
       'INSERT INTO powiadomienie (typ, tresc, Ofertaid) VALUES ("system", ?, ?)',
       [trescAdmin, ofertaId]
@@ -85,7 +85,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     res.status(201).json({
       id: ofertaId,
-      tytuł,
+      tytul,
       opis,
       wynagrodzenie,
       wymagania,
