@@ -495,65 +495,65 @@ INSERT INTO `firma` (`nazwa`, `strona_www`) VALUES
 -- =============================================
 INSERT INTO `kategoriapracy` (`Nazwa`, `KategoriaPracyid`) VALUES
 -- Główne kategorie
-('Programowanie', NULL),
-('Administracja i DevOps', NULL),
-('Testowanie i QA', NULL),
-('Analiza i zarządzanie projektami', NULL),
-('Data Science i Big Data', NULL),
-('Cyberbezpieczeństwo', NULL),
-('UX / UI i Grafika', NULL),
-('Mobile', NULL),
-('Embedded i Hardware', NULL),
-('Artificial Intelligence / Machine Learning', NULL),
+('Programowanie', 1),
+('Administracja i DevOps', 2),
+('Testowanie i QA', 3),
+('Analiza i zarządzanie projektami', 4),
+('Data Science i Big Data', 5),
+('Cyberbezpieczeństwo', 6),
+('UX / UI i Grafika', 7),
+('Mobile', 8),
+('Embedded i Hardware', 9),
+('Artificial Intelligence / Machine Learning', 10),
 
 -- Podkategorie Programowania
-('Programowanie Java', 1),
-('Programowanie .NET / C#', 1),
-('Programowanie Python', 1),
-('Programowanie JavaScript / TypeScript', 1),
-('Programowanie PHP', 1),
-('Programowanie Go', 1),
-('Programowanie Rust', 1),
-('Programowanie Kotlin', 1),
-('Programowanie Scala', 1),
-('Programowanie C/C++', 1),
+('Programowanie Java', 11),
+('Programowanie .NET / C#', 12),
+('Programowanie Python', 13),
+('Programowanie JavaScript / TypeScript', 14),
+('Programowanie PHP', 15),
+('Programowanie Go', 16),
+('Programowanie Rust', 17),
+('Programowanie Kotlin', 18),
+('Programowanie Scala', 19),
+('Programowanie C/C++', 20),
 
 -- Podkategorie Administracja i DevOps
-('Administracja serwerami Linux', 2),
-('Administracja Windows Server', 2),
-('DevOps / SRE', 2),
-('Cloud – AWS', 2),
-('Cloud – Azure', 2),
-('Cloud – Google Cloud', 2),
-('Konteneryzacja i Kubernetes', 2),
+('Administracja serwerami Linux', 21),
+('Administracja Windows Server', 22),
+('DevOps / SRE', 23),
+('Cloud – AWS', 24),
+('Cloud – Azure', 25),
+('Cloud – Google Cloud', 26),
+('Konteneryzacja i Kubernetes', 27),
 
 -- Testowanie i QA
-('Testowanie automatyczne', 3),
-('Testowanie manualne',3),
-('QA Engineer',3),
-('Performance Testing',3),
+('Testowanie automatyczne', 28),
+('Testowanie manualne',29),
+('QA Engineer',30),
+('Performance Testing',31),
 
 -- Analiza i zarządzanie
-('Business Analyst',4),
-('Product Owner',4),
-('Scrum Master / Agile Coach',4),
-('Project Manager',4),
+('Business Analyst',32),
+('Product Owner',33),
+('Scrum Master / Agile Coach',34),
+('Project Manager',35),
 
 -- Data
-('Data Engineer',5),
-('Data Analyst',5),
-('Data Scientist',5),
-('BI Developer',5),
+('Data Engineer',36),
+('Data Analyst',37),
+('Data Scientist',38),
+('BI Developer',39),
 
 -- Cyberbezpieczeństwo
-('Security Engineer',6),
-('Pentester',6),
-('Security Analyst',6),
+('Security Engineer',40),
+('Pentester',41),
+('Security Analyst',42),
 
 -- UX/UI
-('UX Designer',7),
-('UI Designer',7),
-('Graphic Designer',7);
+('UX Designer',43),
+('UI Designer',44),
+('Graphic Designer',45);
 
 
 -- =============================================
