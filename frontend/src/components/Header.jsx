@@ -1,21 +1,24 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { socket } from "../socket";
 import "../styles/components/Header.css";
+import { FontContext } from "../context/FontContext";
 
 export default function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [observedOffers, setObservedOffers] = useState([]);
   const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false); // fetch tylko raz
+  const [initialized, setInitialized] = useState(false);
 
   const navigate = useNavigate();
   const kandydatIdRaw = localStorage.getItem("userId");
   const kandydatId = kandydatIdRaw ? Number(kandydatIdRaw) : null;
   const token = localStorage.getItem("token");
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+
+  const { increaseFont, decreaseFont } = useContext(FontContext);
 
   const parseNotifDate = (notif) => {
     const possible =
@@ -54,7 +57,6 @@ export default function Header() {
 
       normalized.sort((a, b) => new Date(b.data) - new Date(a.data));
       setObservedOffers((prev) => {
-        // zachowaj lokalne zmiany (przeczytane/usunięte)
         const merged = normalized.map((n) => {
           const local = prev.find((o) => o.id === n.id || o.OfertaId === n.OfertaId);
           return local ? { ...n, przeczytane: local.przeczytane } : n;
@@ -97,7 +99,7 @@ export default function Header() {
   useEffect(() => {
     if (!kandydatId) return;
 
-    if (!initialized) fetchNotifications(); // fetch tylko raz
+    if (!initialized) fetchNotifications(); 
 
     const handler = (notif) => {
       const target = notif?.kandydatId ?? notif?.userId ?? notif?.targetId ?? null;
@@ -167,8 +169,10 @@ export default function Header() {
       <div className="logo"></div>
 
       <div className="header-right">
-        <button className="font-btn">A+</button>
-        <button className="font-btn">A-</button>
+        <div className="font-controls">
+          <button className="font-btn" onClick={increaseFont}>A+</button>
+          <button className="font-btn" onClick={decreaseFont}>A-</button>
+        </div>
         <span className="welcome">
           Witaj{ kandydatId ? `, kandydacie #${kandydatId}` : "" }
         </span>

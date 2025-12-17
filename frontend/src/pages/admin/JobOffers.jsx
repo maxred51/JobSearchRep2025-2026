@@ -47,16 +47,11 @@ const JobOffers = () => {
             <div className="offers-toolbar">
               <input
                 type="text"
-                placeholder="🔍 Szukaj"
+                placeholder="Szukaj"
                 className="search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <select className="filter-select">
-                <option>Filtruj</option>
-                <option>Aktywne</option>
-                <option>Zakończone</option>
-              </select>
             </div>
 
             {loading ? (

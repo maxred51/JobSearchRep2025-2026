@@ -109,99 +109,95 @@ router.post('/', authMiddleware, async (req, res) => {
 // READ - Pobieranie wszystkich ofert (dla administratora i publiczne)
 router.get('/', authMiddleware, async (req, res) => {
   const { kategoriaPracy, poziom, wymiar, tryb, umowa } = req.query;
+
   // Walidacja parametrów query
-  if (kategoriaPracy && isNaN(parseInt(kategoriaPracy))) {
-    return res.status(400).json({ error: 'KategoriaPracyid musi być liczbą całkowitą' });
-  }
-  if (poziom && isNaN(parseInt(poziom))) {
-    return res.status(400).json({ error: 'Poziomid musi być liczbą całkowitą' });
-  }
-  if (wymiar && isNaN(parseInt(wymiar))) {
-    return res.status(400).json({ error: 'Wymiarid musi być liczbą całkowitą' });
-  }
-  if (tryb && isNaN(parseInt(tryb))) {
-    return res.status(400).json({ error: 'Trybid musi być liczbą całkowitą' });
-  }
-  if (umowa && isNaN(parseInt(umowa))) {
-    return res.status(400).json({ error: 'Umowaid musi być liczbą całkowitą' });
-  }
-  try {
-    if (req.user.role === 'administrator') {
-      let query = `
-        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.id AS Firmaid, f.nazwa AS nazwa_firmy, o.KategoriaPracyid, o.aktywna, o.PracownikHRid
-        FROM oferta o
-        JOIN pracownikHR p ON o.PracownikHRid = p.id
-        JOIN firma f ON p.Firmaid = f.id
-      `;
-      const queryParams = [];
-
-      // Filtrowanie po kategorii pracy
-      if (kategoriaPracy) {
-        query += ' AND o.KategoriaPracyid = ?';
-        queryParams.push(kategoriaPracy);
-      }
-
-      // Filtrowanie po cechach
-      if (poziom) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_poziom WHERE Poziomid = ?)';
-        queryParams.push(poziom);
-      }
-      if (wymiar) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_wymiar WHERE Wymiarid = ?)';
-        queryParams.push(wymiar);
-      }
-      if (tryb) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_tryb WHERE Trybid = ?)';
-        queryParams.push(tryb);
-      }
-      if (umowa) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_umowa WHERE Umowaid = ?)';
-        queryParams.push(umowa);
-      }
-
-      const [rows] = await pool.query(query, queryParams);
-      res.json(rows);
-    } else {
-      let query = `
-        SELECT o.id, o.tytul, o.lokalizacja, o.data, f.id AS Firmaid, f.nazwa AS nazwa_firmy, o.KategoriaPracyid, o.aktywna, o.PracownikHRid
-        FROM oferta o
-        JOIN pracownikHR p ON o.PracownikHRid = p.id
-        JOIN firma f ON p.Firmaid = f.id
-        WHERE o.aktywna = TRUE
-      `;
-      const queryParams = [];
-
-      // Filtrowanie po kategorii pracy
-      if (kategoriaPracy) {
-        query += ' AND o.KategoriaPracyid = ?';
-        queryParams.push(kategoriaPracy);
-      }
-
-      // Filtrowanie po cechach
-      if (poziom) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_poziom WHERE Poziomid = ?)';
-        queryParams.push(poziom);
-      }
-      if (wymiar) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_wymiar WHERE Wymiarid = ?)';
-        queryParams.push(wymiar);
-      }
-      if (tryb) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_tryb WHERE Trybid = ?)';
-        queryParams.push(tryb);
-      }
-      if (umowa) {
-        query += ' AND o.id IN (SELECT Ofertaid FROM oferta_umowa WHERE Umowaid = ?)';
-        queryParams.push(umowa);
-      }
-
-      const [rows] = await pool.query(query, queryParams);
-      res.json(rows);
+  const paramsMap = { kategoriaPracy, poziom, wymiar, tryb, umowa };
+  for (const [key, value] of Object.entries(paramsMap)) {
+    if (value && isNaN(parseInt(value))) {
+      return res.status(400).json({ error: `${key} musi być liczbą całkowitą` });
     }
+  }
+
+  try {
+    const queryParams = [];
+    let query = `
+      SELECT o.id, o.tytul, o.lokalizacja, o.data, o.KategoriaPracyid,
+             f.id AS Firmaid, f.nazwa AS nazwa_firmy,
+             kp.nazwa AS nazwa_kategorii_pracy,
+             o.aktywna,
+             GROUP_CONCAT(DISTINCT t.id) AS tryby_ids,
+             GROUP_CONCAT(DISTINCT t.nazwa) AS tryby_nazwy,
+             GROUP_CONCAT(DISTINCT po.id) AS poziomy_ids,
+             GROUP_CONCAT(DISTINCT po.nazwa) AS poziomy_nazwy,
+             GROUP_CONCAT(DISTINCT w.id) AS wymiary_ids,
+             GROUP_CONCAT(DISTINCT w.nazwa) AS wymiary_nazwy,
+             GROUP_CONCAT(DISTINCT u.id) AS umowy_ids,
+             GROUP_CONCAT(DISTINCT u.nazwa) AS umowy_nazwy
+      FROM oferta o
+      JOIN pracownikHR p ON o.PracownikHRid = p.id
+      JOIN firma f ON p.Firmaid = f.id
+      JOIN kategoriapracy kp ON o.KategoriaPracyid = kp.id
+      LEFT JOIN oferta_tryb ot ON o.id = ot.Ofertaid
+      LEFT JOIN tryb t ON ot.Trybid = t.id
+      LEFT JOIN oferta_poziom op ON o.id = op.Ofertaid
+      LEFT JOIN poziom po ON op.Poziomid = po.id
+      LEFT JOIN oferta_wymiar ow ON o.id = ow.Ofertaid
+      LEFT JOIN wymiar w ON ow.Wymiarid = w.id
+      LEFT JOIN oferta_umowa ou ON o.id = ou.Ofertaid
+      LEFT JOIN umowa u ON ou.Umowaid = u.id
+    `;
+
+    // Filtry
+    if (kategoriaPracy) {
+      query += ' AND o.KategoriaPracyid = ?';
+      queryParams.push(kategoriaPracy);
+    }
+    if (poziom) {
+      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_poziom WHERE Poziomid = ?)';
+      queryParams.push(poziom);
+    }
+    if (wymiar) {
+      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_wymiar WHERE Wymiarid = ?)';
+      queryParams.push(wymiar);
+    }
+    if (tryb) {
+      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_tryb WHERE Trybid = ?)';
+      queryParams.push(tryb);
+    }
+    if (umowa) {
+      query += ' AND o.id IN (SELECT Ofertaid FROM oferta_umowa WHERE Umowaid = ?)';
+      queryParams.push(umowa);
+    }
+
+    query += ' GROUP BY o.id';
+
+    const [rows] = await pool.query(query, queryParams);
+
+    // Mapowanie GROUP_CONCAT na tablice
+    const mapped = rows.map(r => ({
+      ...r,
+      tryby: r.tryby_ids
+        ? r.tryby_ids.split(',').map((id, i) => ({ id: Number(id), nazwa: r.tryby_nazwy.split(',')[i] }))
+        : [],
+      poziomy: r.poziomy_ids
+        ? r.poziomy_ids.split(',').map((id, i) => ({ id: Number(id), nazwa: r.poziomy_nazwy.split(',')[i] }))
+        : [],
+      wymiary: r.wymiary_ids
+        ? r.wymiary_ids.split(',').map((id, i) => ({ id: Number(id), nazwa: r.wymiary_nazwy.split(',')[i] }))
+        : [],
+      umowy: r.umowy_ids
+        ? r.umowy_ids.split(',').map((id, i) => ({ id: Number(id), nazwa: r.umowy_nazwy.split(',')[i] }))
+        : []
+    }));
+
+    res.json(mapped);
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
 
 // Interfejs Administrator (zakładka "Oferty pracy") i Interfejs Kandydat (zakładka "Przegląd ofert")
 // READ - Pobieranie oferty po ID (dla administratora i publiczne)

@@ -6,6 +6,10 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema mydb
 -- -----------------------------------------------------
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+SET collation_connection = 'utf8mb4_unicode_ci';
+
 CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8mb4;
 USE `mydb` ;
 
@@ -496,7 +500,7 @@ INSERT INTO `kategoriapracy` (`Nazwa`, `KategoriaPracyid`) VALUES
 ('Testowanie i QA', NULL),
 ('Analiza i zarządzanie projektami', NULL),
 ('Data Science i Big Data', NULL),
-('Cyberbezpieczenstwo', NULL),
+('Cyberbezpieczeństwo', NULL),
 ('UX / UI i Grafika', NULL),
 ('Mobile', NULL),
 ('Embedded i Hardware', NULL),
@@ -563,9 +567,9 @@ INSERT INTO `administrator` (`imie`, `nazwisko`, `plec`, `email`, `haslo`) VALUE
 -- 4. Poziom doświadczenia
 -- =============================================
 INSERT INTO `poziom` (`nazwa`) VALUES
-('praktykant/stazysta'),
+('praktykant/stażysta'),
 ('asystent'),
-('mlodszy specjalista'),
+('młodszy specjalista'),
 ('specjalista'),
 ('ekspert');
 
@@ -573,19 +577,19 @@ INSERT INTO `poziom` (`nazwa`) VALUES
 -- 5. Rodzaj umowy
 -- =============================================
 INSERT INTO `umowa` (`nazwa`) VALUES
-('umowa o prace'),
+('umowa o pracę'),
 ('umowa zlecenie'),
-('umowa o dzielo'),
+('umowa o dzieło'),
 ('kontrakt B2B'),
-('umowa o staz');
+('umowa o staż');
 
 -- =============================================
 -- 6. Wymiar etatu
 -- =============================================
 INSERT INTO `wymiar` (`nazwa`) VALUES
-('pelny etat'),
+('pełny etat'),
 ('1/2 etatu'),
-('czesc etatu'),
+('część etatu'),
 ('dodatkowa/tymczasowa'),
 ('weekendowa');
 

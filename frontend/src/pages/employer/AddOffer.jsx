@@ -26,7 +26,7 @@ export default function AddOffer() {
     requirements: "",
     location: "",
     workTime: "",
-    category: "",
+    category: "", // tutaj będzie ID kategorii
     position: "",
     modes: [],
     levels: [],
@@ -60,7 +60,7 @@ export default function AddOffer() {
           axios.get("/umowa", { headers }),
           axios.get("/kategoriapracy", { headers }),
         ]);
-        console.log("Kategorie pracy:", categoriesRes.data);
+
         setAvailableModes(modesRes.data);
         setAvailableLevels(levelsRes.data);
         setAvailableDimensions(dimensionsRes.data);
@@ -84,9 +84,9 @@ export default function AddOffer() {
       setForm((prev) => {
         const prevArr = prev[name] || [];
         if (checked) {
-          return { ...prev, [name]: [...prevArr, value] };
+          return { ...prev, [name]: [...prevArr, Number(value)] };
         } else {
-          return { ...prev, [name]: prevArr.filter((v) => v !== value) };
+          return { ...prev, [name]: prevArr.filter((v) => v !== Number(value)) };
         }
       });
     } else {
@@ -104,10 +104,11 @@ export default function AddOffer() {
         return;
       }
 
+      // 1️⃣ Tworzymy ofertę
       const ofertaRes = await axios.post(
         "/oferta",
         {
-          tytuł: form.title,
+          tytul: form.title,
           opis: form.description,
           wynagrodzenie: parseFloat(form.salary),
           wymagania: form.requirements,
@@ -116,7 +117,7 @@ export default function AddOffer() {
           KategoriaPracyid: parseInt(form.category),
           stanowisko: form.position,
         },
-        { headers: { Authorization: `Bearer ${token}`, "Accept": "application/json; charset=utf-8", "Content-Type": "application/json; charset=utf-8", } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const ofertaId = ofertaRes.data.id;
@@ -125,6 +126,7 @@ export default function AddOffer() {
         return;
       }
 
+      // 2️⃣ Funkcja do dodawania powiązań
       const linkRelations = async (fieldName, endpoint, key) => {
         for (const id of form[fieldName]) {
           try {
@@ -134,10 +136,7 @@ export default function AddOffer() {
               { headers: { Authorization: `Bearer ${token}` } }
             );
           } catch (err) {
-            console.error(
-              `Błąd dodawania ${endpoint}:`,
-              err.response?.data || err
-            );
+            console.error(`Błąd dodawania ${endpoint}:`, err.response?.data || err);
           }
         }
       };
@@ -149,6 +148,7 @@ export default function AddOffer() {
 
       alert("Oferta oraz powiązania zostały dodane!");
 
+      // 3️⃣ Reset formularza
       setForm({
         title: "",
         description: "",
@@ -173,14 +173,11 @@ export default function AddOffer() {
     <div className="employee-layout">
       <EmployeeHeader />
       <div className="employee-content">
-        <EmployeeSidebar active="offers"/>
-
+        <EmployeeSidebar active="offers" />
         <main className="employee-main">
           <a href="/employee" className="back-link">← Powrót</a>
           <h2>Dodanie nowej oferty</h2>
           <section className="add-offer-section">
-            
-
             <form className="add-offer-form" onSubmit={handleSubmit}>
               <div className="form-card">
                 <label>
@@ -254,8 +251,8 @@ export default function AddOffer() {
                   >
                     <option value="">-- Wybierz kategorię --</option>
                     {availableCategories.map((cat) => (
-                      <option key={cat.id} value={cat.KategoriaPracyid}>
-                        {cat.Nazwa}
+                      <option key={cat.id} value={cat.id}>
+                        {cat.nazwa}
                       </option>
                     ))}
                   </select>
@@ -272,11 +269,11 @@ export default function AddOffer() {
                           <input
                             type="checkbox"
                             name="levels"
-                            value={String(lvl.id)}
-                            checked={form.levels.includes(String(lvl.id))}
+                            value={lvl.id}
+                            checked={form.levels.includes(lvl.id)}
                             onChange={handleChange}
                           />
-                          {lvl.nazwa || lvl.name}
+                          {lvl.nazwa}
                         </label>
                       ))}
                     </div>
@@ -287,11 +284,11 @@ export default function AddOffer() {
                           <input
                             type="checkbox"
                             name="dimensions"
-                            value={String(dim.id)}
-                            checked={form.dimensions.includes(String(dim.id))}
+                            value={dim.id}
+                            checked={form.dimensions.includes(dim.id)}
                             onChange={handleChange}
                           />
-                          {dim.nazwa || dim.name}
+                          {dim.nazwa}
                         </label>
                       ))}
                     </div>
@@ -302,11 +299,11 @@ export default function AddOffer() {
                           <input
                             type="checkbox"
                             name="modes"
-                            value={String(mode.id)}
-                            checked={form.modes.includes(String(mode.id))}
+                            value={mode.id}
+                            checked={form.modes.includes(mode.id)}
                             onChange={handleChange}
                           />
-                          {mode.nazwa || mode.name}
+                          {mode.nazwa}
                         </label>
                       ))}
                     </div>
@@ -317,11 +314,11 @@ export default function AddOffer() {
                           <input
                             type="checkbox"
                             name="contracts"
-                            value={String(c.id)}
-                            checked={form.contracts.includes(String(c.id))}
+                            value={c.id}
+                            checked={form.contracts.includes(c.id)}
                             onChange={handleChange}
                           />
-                          {c.nazwa || c.name}
+                          {c.nazwa}
                         </label>
                       ))}
                     </div>

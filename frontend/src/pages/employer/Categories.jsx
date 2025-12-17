@@ -13,6 +13,9 @@ export default function Categories() {
   const [newCategory, setNewCategory] = useState("");
   const [editCategory, setEditCategory] = useState({ id: null, nazwa: "" });
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState(""); 
+
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -55,7 +58,7 @@ export default function Categories() {
       alert(`Dodano kategorię: ${res.data.nazwa}`);
       setNewCategory("");
       setShowAddForm(false);
-      fetchCategories();
+      setCategories([...categories, res.data]); 
     } catch (err) {
       console.error(
         "Błąd przy dodawaniu kategorii:",
@@ -83,7 +86,11 @@ export default function Categories() {
       );
       alert("Zmieniono nazwę kategorii.");
       setShowEditForm(false);
-      fetchCategories();
+      setCategories(
+        categories.map((cat) =>
+          cat.id === editCategory.id ? { ...cat, nazwa: editCategory.nazwa } : cat
+        )
+      );
     } catch (err) {
       console.error("Błąd przy edycji:", err.response?.data || err);
       alert(
@@ -102,7 +109,7 @@ export default function Categories() {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Kategoria została usunięta.");
-      fetchCategories();
+      setCategories(categories.filter((cat) => cat.id !== id));
     } catch (err) {
       console.error("Błąd przy usuwaniu kategorii:", err.response?.data || err);
       alert(err.response?.data?.error || "Nie udało się usunąć kategorii.");
@@ -111,13 +118,21 @@ export default function Categories() {
 
   if (loading) return <p>Ładowanie kategorii...</p>;
 
+  const filteredCategories = categories
+    .filter((cat) =>
+      cat.nazwa.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortOrder === "asc") return a.nazwa.localeCompare(b.nazwa);
+      if (sortOrder === "desc") return b.nazwa.localeCompare(a.nazwa);
+      return 0;
+    });
+
   return (
     <div className="categories-page">
       <EmployeeHeader />
-
       <div className="categories-content">
         <EmployeeSidebar active="categories" />
-
         <main className="categories-main">
           <section className="content-section">
             <h2>Kategorie kandydatów</h2>
@@ -127,11 +142,17 @@ export default function Categories() {
                 type="text"
                 placeholder="Szukaj kategorii..."
                 className="search-input"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <select className="filter-select">
-                <option>Sortuj</option>
-                <option>Nazwa A–Z</option>
-                <option>Nazwa Z–A</option>
+              <select
+                className="filter-select"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              >
+                <option value="">Sortuj</option>
+                <option value="asc">Nazwa A–Z</option>
+                <option value="desc">Nazwa Z–A</option>
               </select>
               <button className="add-btn" onClick={() => setShowAddForm(true)}>
                 Dodaj kategorię
@@ -207,12 +228,12 @@ export default function Categories() {
                 </tr>
               </thead>
               <tbody>
-                {categories.length === 0 ? (
+                {filteredCategories.length === 0 ? (
                   <tr>
                     <td colSpan="3">Brak kategorii.</td>
                   </tr>
                 ) : (
-                  categories.map((cat) => (
+                  filteredCategories.map((cat) => (
                     <tr key={cat.id}>
                       <td>{cat.nazwa}</td>
                       <td>{cat.liczba_kandydatow ?? 0}</td>

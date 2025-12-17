@@ -8,6 +8,7 @@ import "../../styles/employer/ApplicationsOverview.css";
 export default function ApplicationsOverview() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
+  const [categoriesData, setCategoriesData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
@@ -23,36 +24,37 @@ export default function ApplicationsOverview() {
 
         const [resApps, resAssignments, resCategories] = await Promise.all([
           axios.get("http://localhost:5000/api/aplikacja", { headers }),
-          axios.get("http://localhost:5000/api/kandydat_kategoriakandydata", {
-            headers,
-          }),
-          axios.get("http://localhost:5000/api/kategoriakandydata", {
-            headers,
-          }),
+          axios.get("http://localhost:5000/api/kandydat_kategoriakandydata", { headers }),
+          axios.get("http://localhost:5000/api/kategoriakandydata", { headers }),
         ]);
 
+        setCategoriesData(resCategories.data); // zachowujemy wszystkie kategorie
+
+        // Mapowanie kategorii po ID
         const categoriesMap = {};
         resCategories.data.forEach((cat) => {
           categoriesMap[cat.id] = cat.nazwa;
         });
 
+        // Kandydat -> kategoria
         const candidateCategoryMap = {};
         resAssignments.data.forEach((assign) => {
           candidateCategoryMap[assign.Kandydatid] =
-            categoriesMap[assign.KategoriaKandydataid] || "Brak kategorii";
+            assign.KategoriaKandydataid || null;
         });
 
         const normalized = resApps.data.map((a) => ({
           id: a.id,
           Kandydatid: a.Kandydatid,
           Ofertaid: a.Ofertaid,
-          status: a.status || "Oczekująca",
+          status: a.status?.toLowerCase() || "oczekujaca", // lowercase dla spójności
           candidate_name:
-            a.imie && a.nazwisko
-              ? `${a.imie} ${a.nazwisko}`
-              : "Nieznany kandydat",
+            a.imie && a.nazwisko ? `${a.imie} ${a.nazwisko}` : "Nieznany kandydat",
           position: a.stanowisko || "Brak stanowiska",
-          category: candidateCategoryMap[a.Kandydatid] || "Brak kategorii",
+          categoryId: candidateCategoryMap[a.Kandydatid] || null,
+          category: candidateCategoryMap[a.Kandydatid]
+            ? categoriesMap[candidateCategoryMap[a.Kandydatid]]
+            : "Brak kategorii",
         }));
 
         setApplications(normalized);
@@ -64,30 +66,18 @@ export default function ApplicationsOverview() {
     fetchAll();
   }, [employeeId]);
 
-  const handleEdit = (id) => navigate(`/employee/edit-application/${id}`);
-
+  // 🔹 Funkcje CRUD
   const handleDelete = async (Kandydatid, Ofertaid) => {
-    const confirmDelete = window.confirm(
-      "Czy na pewno chcesz usunąć tę aplikację?"
-    );
-    if (!confirmDelete) return;
-
+    if (!window.confirm("Czy na pewno chcesz usunąć tę aplikację?")) return;
     try {
       const token = localStorage.getItem("token");
-
       await axios.delete(
         `http://localhost:5000/api/aplikacja/${Kandydatid}/${Ofertaid}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setApplications((prev) =>
-        prev.filter(
-          (app) => !(app.Kandydatid === Kandydatid && app.Ofertaid === Ofertaid)
-        )
+        prev.filter((app) => !(app.Kandydatid === Kandydatid && app.Ofertaid === Ofertaid))
       );
-
       alert("Aplikacja została usunięta.");
     } catch (err) {
       console.error("Błąd podczas usuwania aplikacji:", err);
@@ -111,35 +101,64 @@ export default function ApplicationsOverview() {
             : a
         )
       );
-
-      alert("Status aplikacji został zmieniony.");
     } catch (err) {
       console.error("Błąd podczas zmiany statusu:", err);
       alert("Nie udało się zmienić statusu.");
     }
   };
 
+  const handleCategoryChange = async (app, newCategoryId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5000/api/aplikacja/${app.Kandydatid}/${app.Ofertaid}/category`,
+        { KategoriaId: newCategoryId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const newCategoryName =
+        categoriesData.find((c) => c.id === parseInt(newCategoryId))?.nazwa ||
+        "Brak kategorii";
+
+      setApplications((prev) =>
+        prev.map((a) =>
+          a.Kandydatid === app.Kandydatid && a.Ofertaid === app.Ofertaid
+            ? { ...a, categoryId: newCategoryId, category: newCategoryName }
+            : a
+        )
+      );
+    } catch (err) {
+      console.error("Błąd podczas zmiany kategorii:", err);
+      alert("Nie udało się zmienić kategorii.");
+    }
+  };
+
+  // 🔹 Filtracja
   const filteredApps = applications.filter((app) => {
-    const matchesSearch = app.candidate_name
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter ? app.status === statusFilter : true;
-    const matchesPosition = positionFilter
-      ? app.position === positionFilter
-      : true;
-    const matchesCategory = categoryFilter
-      ? app.category === categoryFilter
-      : true;
-    return matchesSearch && matchesStatus && matchesPosition && matchesCategory;
+    return (
+      app.candidate_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (statusFilter ? app.status === statusFilter : true) &&
+      (positionFilter ? app.position === positionFilter : true) &&
+      (categoryFilter ? app.categoryId === parseInt(categoryFilter) : true)
+    );
   });
+
+  // 🔹 Unikalne opcje dla selectów
+  const uniquePositions = [...new Set(applications.map((a) => a.position))].filter(Boolean);
+
+  // 🔹 Reset filtrów
+  const resetFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("");
+    setPositionFilter("");
+    setCategoryFilter("");
+  };
 
   return (
     <div className="applications-overview-page">
       <EmployeeHeader />
-
       <div className="applications-overview-content">
         <EmployeeSidebar active="applications" />
-
         <main className="applications-overview-main">
           <section className="content-section">
             <h2>Aplikacje kandydatów</h2>
@@ -159,9 +178,9 @@ export default function ApplicationsOverview() {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="">Status</option>
-                <option>Oczekująca</option>
-                <option>Zaakceptowana</option>
-                <option>Odrzucona</option>
+                <option value="oczekujaca">Oczekująca</option>
+                <option value="zakceptowana">Zaakceptowana</option>
+                <option value="odrzucona">Odrzucona</option>
               </select>
 
               <select
@@ -170,13 +189,11 @@ export default function ApplicationsOverview() {
                 onChange={(e) => setPositionFilter(e.target.value)}
               >
                 <option value="">Stanowisko</option>
-                {[...new Set(applications.map((a) => a.position))]
-                  .filter(Boolean)
-                  .map((pos, index) => (
-                    <option key={`${pos}-${index}`} value={pos}>
-                      {pos}
-                    </option>
-                  ))}
+                {uniquePositions.map((pos, i) => (
+                  <option key={i} value={pos}>
+                    {pos}
+                  </option>
+                ))}
               </select>
 
               <select
@@ -185,13 +202,11 @@ export default function ApplicationsOverview() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
               >
                 <option value="">Kategoria</option>
-                {[...new Set(applications.map((a) => a.category))]
-                  .filter(Boolean)
-                  .map((cat, index) => (
-                    <option key={`${cat}-${index}`} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
+                {categoriesData.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nazwa}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -211,7 +226,7 @@ export default function ApplicationsOverview() {
                     <tr key={app.id}>
                       <td>{app.candidate_name}</td>
                       <td>{app.position}</td>
-                       <td>
+                      <td>
                         <select
                           value={app.status}
                           onChange={(e) => handleStatusChange(app, e.target.value)}
@@ -226,9 +241,7 @@ export default function ApplicationsOverview() {
                         <button
                           className="view-btn"
                           onClick={() =>
-                            navigate(
-                              `/applicationdetails/${app.Kandydatid}/${app.Ofertaid}`
-                            )
+                            navigate(`/applicationdetails/${app.Kandydatid}/${app.Ofertaid}`)
                           }
                         >
                           Podgląd
