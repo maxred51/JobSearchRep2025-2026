@@ -39,14 +39,12 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // 2. Pobranie danych HR i firmy
     const [[hrRow]] = await pool.query(
-      `SELECT p.imie, p.nazwisko, f.nazwa AS firma
+      `SELECT p.imie, p.nazwisko, p.Firmaid, f.nazwa AS firma
        FROM pracownikHR p
        JOIN firma f ON p.Firmaid = f.id
        WHERE p.id = ?`,
       [req.user.id]
     );
-
-    const firmaId = hrRow ? hrRow.Firmaid : null;
 
     // 3. Kandydaci obserwujący firmę
     const [kandydaci] = await pool.query(
@@ -55,25 +53,24 @@ router.post('/', authMiddleware, async (req, res) => {
     );
 
     const io = req.app.get('io');
-    if (!io) {
-      return res.status(500).json({ error: 'Socket.IO niedostępne' });
-    }
 
     // 4. Dodanie powiadomień + wysłanie przez Socket.IO do kandydatów
     for (const kandydat of kandydaci) {
-      const tresc = `Dodano ofertę w firmie ${hrRow.firma}: ${tytuł}`;
+      const tresc = `Dodano ofertę w firmie ${hrRow.firma}: ${tytul}`;
       const [notifResult] = await pool.query(
         'INSERT INTO powiadomienie (typ, tresc, Kandydatid, Ofertaid) VALUES ("oferta", ?, ?, ?)',
         [tresc, kandydat.Kandydatid, ofertaId]
       );
 
-      io.emit(`powiadomienie-${kandydat.Kandydatid}`, {
+      const notification = {
         id: notifResult.insertId,
         tresc,
-        ofertaId,
+        Ofertaid: ofertaId,
         przeczytane: false,
-        data: new Date()
-      });
+        data: new Date().toISOString()
+      };
+
+      io.to(`kandydat-${kandydat.Kandydatid}`).emit('notification:receive', notification);
     }
 
     // 5. Dodanie powiadomienia systemowego dla administratora

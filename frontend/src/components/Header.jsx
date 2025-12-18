@@ -8,21 +8,18 @@ import { FontContext } from "../context/FontContext";
 export default function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [observedOffers, setObservedOffers] = useState([]);
-  const [showAll, setShowAll] = useState(false);
+  const [toasts, setToasts] = useState([]); // Dla real-time powiadomień na ekranie
   const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
   const navigate = useNavigate();
   const kandydatIdRaw = localStorage.getItem("userId");
   const kandydatId = kandydatIdRaw ? Number(kandydatIdRaw) : null;
   const token = localStorage.getItem("token");
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
-
   const { increaseFont, decreaseFont } = useContext(FontContext);
 
   const parseNotifDate = (notif) => {
-    const possible =
-      notif?.data ?? notif?.createdAt ?? notif?.date ?? notif?.czas ?? notif?.timestamp;
+    const possible = notif?.data ?? notif?.createdAt ?? notif?.date ?? notif?.czas ?? notif?.timestamp;
     const d = possible ? new Date(possible) : new Date();
     return isNaN(d.getTime()) ? new Date() : d;
   };
@@ -33,136 +30,113 @@ export default function Header() {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/powiadomienie/kandydat/${kandydatId}/observed-offers`,
+        `http://localhost:5000/api/powiadomienie/kandydat/${kandydatId}`,
         authHeader
       );
 
       const raw = Array.isArray(res.data) ? res.data : [];
-      const normalized = raw.map((n) => {
-        const date = parseNotifDate(n);
-        return {
-          id: n.id ?? null,
-          OfertaId: n.OfertaId ?? n.Ofertaid ?? n.ofertaId ?? n.offerId ?? null,
-          przeczytane: Boolean(n.przeczytane),
-          data: date.toISOString(),
-          powiadomienie_tresc:
-            n.powiadomienie_tresc ??
-            n.tresc ??
-            n.message ??
-            (n.tytul
-              ? `Nowa oferta: ${n.tytul} – ${n.nazwa_firmy}`
-              : "Nowa oferta z obserwowanej firmy"),
-        };
-      });
+      const normalized = raw.map((n) => ({
+        id: n.id,
+        Ofertaid: n.Ofertaid,
+        przeczytane: Boolean(n.przeczytane),
+        data: parseNotifDate(n).toISOString(),
+        tresc: n.tresc,
+      }));
 
       normalized.sort((a, b) => new Date(b.data) - new Date(a.data));
-      setObservedOffers((prev) => {
-        const merged = normalized.map((n) => {
-          const local = prev.find((o) => o.id === n.id || o.OfertaId === n.OfertaId);
-          return local ? { ...n, przeczytane: local.przeczytane } : n;
-        });
-        return merged;
-      });
+      setObservedOffers(normalized);
     } catch (err) {
       console.error("Błąd pobierania powiadomień:", err);
     } finally {
       setLoading(false);
-      setInitialized(true);
     }
   }, [kandydatId, token]);
 
   const prependNotification = useCallback((notif) => {
     if (!notif) return;
     const normalized = {
-      ...notif,
-      id: notif.id ?? notif._id ?? null,
-      OfertaId: notif.OfertaId ?? notif.ofertaId ?? notif.offerId ?? null,
+      id: notif.id,
+      Ofertaid: notif.Ofertaid,
       przeczytane: !!notif.przeczytane,
       data: parseNotifDate(notif).toISOString(),
-      powiadomienie_tresc: notif.powiadomienie_tresc ?? notif.tresc ?? notif.message ?? "",
+      tresc: notif.tresc,
     };
 
     setObservedOffers((prev) => {
-      const exists = normalized.id
-        ? prev.some((p) => p.id === normalized.id)
-        : prev.some(
-            (p) =>
-              p.powiadomienie_tresc === normalized.powiadomienie_tresc &&
-              p.data === normalized.data
-          );
-
+      const exists = prev.some((p) => p.id === normalized.id);
       if (exists) return prev;
       return [normalized, ...prev].sort((a, b) => new Date(b.data) - new Date(a.data));
     });
+
+    // toast dla wyświetlenia na ekranie
+    const toastId = Date.now();
+    setToasts((prev) => [...prev, { id: toastId, tresc: normalized.tresc }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== toastId));
+    }, 5000);
   }, []);
 
   useEffect(() => {
     if (!kandydatId) return;
 
-    if (!initialized) fetchNotifications(); 
+    fetchNotifications();
 
     const handler = (notif) => {
-      const target = notif?.kandydatId ?? notif?.userId ?? notif?.targetId ?? null;
+      const target = notif?.Kandydatid ?? notif?.kandydatId ?? null;
       if (target && Number(target) !== Number(kandydatId)) return;
       prependNotification(notif);
     };
 
-    socket.on("notification:new", handler);
-    return () => socket.off("notification:new", handler);
-  }, [kandydatId, fetchNotifications, prependNotification, initialized]);
+    socket.on("notification:receive", handler);
+    return () => socket.off("notification:receive", handler);
+  }, [kandydatId, fetchNotifications, prependNotification]);
 
   const handleToggleNotifications = () => setNotificationsOpen((prev) => !prev);
 
   const markAsRead = async (offer) => {
-    if (!offer) return;
+    if (!offer.id) return;
 
-    if (offer.id) {
-      try {
-        await axios.put(
-          `http://localhost:5000/api/powiadomienie/${offer.id}/przeczytane`,
-          {},
-          authHeader
-        );
-      } catch (err) {
-        console.error("Błąd oznaczania jako przeczytane:", err);
-      }
+    try {
+      await axios.put(
+        `http://localhost:5000/api/powiadomienie/${offer.id}/przeczytane`,
+        {},
+        authHeader
+      );
+    } catch (err) {
+      console.error("Błąd oznaczania jako przeczytane:", err);
     }
 
     setObservedOffers((prev) =>
       prev.map((o) =>
-        o.id === offer.id || o.OfertaId === offer.OfertaId ? { ...o, przeczytane: true } : o
+        o.id === offer.id ? { ...o, przeczytane: true } : o
       )
     );
   };
 
   const deleteNotification = async (offer) => {
-    if (!offer) return;
+    if (!offer.id) return;
 
-    if (offer.id) {
-      try {
-        await axios.delete(`http://localhost:5000/api/powiadomienie/${offer.id}`, authHeader);
-      } catch (err) {
-        console.error("Błąd usuwania powiadomienia:", err);
-      }
+    try {
+      await axios.delete(`http://localhost:5000/api/powiadomienie/${offer.id}`, authHeader);
+    } catch (err) {
+      console.error("Błąd usuwania powiadomienia:", err);
     }
 
     setObservedOffers((prev) =>
-      prev.filter((o) => o.id !== offer.id && o.OfertaId !== offer.OfertaId)
+      prev.filter((o) => o.id !== offer.id)
     );
   };
 
   const handleOfferClick = async (offer) => {
-    const offerId = offer?.OfertaId ?? offer?.ofertaId ?? offer?.offerId ?? null;
+    const offerId = offer?.Ofertaid ?? null;
     if (!offerId) return;
 
     if (!offer.przeczytane) await markAsRead(offer);
     navigate(`/offerpreview/${offerId}`);
     setNotificationsOpen(false);
-    setShowAll(false);
   };
 
-  const toggleShowAll = () => setShowAll((prev) => !prev);
-  const notificationsToShow = showAll ? observedOffers : observedOffers.slice(0, 3);
+  const notificationsToShow = observedOffers.slice(0, 3);
 
   return (
     <header className="dashboard-header">
@@ -193,55 +167,55 @@ export default function Header() {
               <p>Ładowanie powiadomień...</p>
             ) : observedOffers.length > 0 ? (
               <>
-                {notificationsToShow.map((offer, idx) => {
-                  const key = offer.id ?? `${offer.powiadomienie_tresc ?? "no-text"}-${idx}`;
+                {notificationsToShow.map((offer, idx) => (
+                  <div
+                    key={offer.id || idx}
+                    className={`notification-item ${offer.przeczytane ? "read" : "unread"}`}
+                    onClick={() => handleOfferClick(offer)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === "Enter" && handleOfferClick(offer)}
+                    style={{ fontWeight: offer.przeczytane ? 'normal' : 'bold' }}
+                  >
+                    <p>{offer.tresc || "Brak treści powiadomienia"}</p>
 
-                  return (
-                    <div
-                      key={key}
-                      className={`notification-item ${offer.przeczytane ? "read" : "unread"}`}
-                      onClick={() => handleOfferClick(offer)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => e.key === "Enter" && handleOfferClick(offer)}
-                    >
-                      <p>{offer.powiadomienie_tresc ?? "Brak treści powiadomienia"}</p>
-
-                      <div className="notification-actions">
-                        {!offer.przeczytane && (
-                          <button
-                            className="mark-read-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markAsRead(offer);
-                            }}
-                          >
-                            Przeczytane
-                          </button>
-                        )}
-
+                    <div className="notification-actions">
+                      {!offer.przeczytane && (
                         <button
-                          className="delete-btn"
+                          className="mark-read-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteNotification(offer);
+                            markAsRead(offer);
                           }}
                         >
-                          Usuń
+                          Przeczytane
                         </button>
-                      </div>
+                      )}
+
+                      <button
+                        className="delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(offer);
+                        }}
+                      >
+                        Usuń
+                      </button>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
 
                 {observedOffers.length > 3 && (
-                  <button className="show-all-btn" onClick={toggleShowAll}>
-                    {showAll ? "Pokaż mniej" : "Pokaż wszystkie"}
+                  <button className="show-all-btn" onClick={() => {
+                    setNotificationsOpen(false);
+                    navigate('/notifications-candidate');
+                  }}>
+                    Pokaż wszystkie
                   </button>
                 )}
               </>
             ) : (
-              <p>Brak ofert z obserwowanych firm lub brak powiadomień</p>
+              <p>Brak powiadomień</p>
             )}
           </div>
         )}
@@ -262,6 +236,15 @@ export default function Header() {
         >
           Wyloguj się
         </Link>
+      </div>
+
+      {/* toast dla real-time powiadomień */}
+      <div className="toast-container">
+        {toasts.map((toast) => (
+          <div key={toast.id} className="toast">
+            {toast.tresc}
+          </div>
+        ))}
       </div>
     </header>
   );

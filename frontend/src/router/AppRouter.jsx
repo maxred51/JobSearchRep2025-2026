@@ -17,6 +17,7 @@ import MyCV from "../pages/candidate/myCV";
 import MyOpinions from "../pages/candidate/myOpinions";
 import JobApplication from "../pages/candidate/JobApplication";
 import JobOfferPreview from "../pages/candidate/JobOfferPreview";
+import NotificationPage from "../pages/candidate/NotificationPage";
 
 // employer
 import EmployeeDashboard from "../pages/employer/EmployeeDashboard";
@@ -91,6 +92,11 @@ function AppRouter() {
         <Route
           path="/offerpreview/:id"
           element={<PrivateRoute element={JobOfferPreview} roles={["kandydat"]} />}
+        />
+
+        <Route
+          path="/notifications-candidate"
+          element={<PrivateRoute element={NotificationPage} roles={["kandydat"]} />}
         />
 
         {/* PRACOWNIK HR */}
